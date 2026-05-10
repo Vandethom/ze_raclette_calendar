@@ -73,7 +73,7 @@ export function GuidePage() {
           À ta première visite, une fenêtre s'ouvre et te demande ton <span className="text-white font-medium">pseudo en jeu</span>.
         </p>
         <ol className="space-y-3">
-          <Step n={1}>Saisis exactement ton pseudo Dofus (celui que tes collègues reconnaissent)</Step>
+          <Step n={1}>Saisis exactement ton pseudo Dofus (celui que tes collègues reconnaissent) et ta classe en jeu.</Step>
           <Step n={2}>Clique <span className="text-white font-medium">Confirmer</span> — il sera retenu pour toutes tes prochaines visites</Step>
         </ol>
         <Tip>Pour changer de pseudo plus tard, clique sur ton pseudo en haut à droite de la page.</Tip>
