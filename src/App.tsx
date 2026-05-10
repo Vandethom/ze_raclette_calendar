@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from './lib/supabase'
 import { Navbar } from './components/Navbar'
 import { CalendarView } from './components/CalendarView'
 import { SearchResults } from './components/SearchResults'
+import { GuidePage } from './components/GuidePage'
 import { CreateEventModal } from './components/CreateEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
 import { PseudoSetup } from './components/PseudoSetup'
@@ -67,6 +68,7 @@ function App() {
   const [createModalDate, setCreateModalDate] = useState<string | null>(null)
   const [detailEvent, setDetailEvent] = useState<GuildEventWithParticipants | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState<'calendar' | 'guide'>('calendar')
 
   const { events, allParticipants, myParticipatedIds, loading, error, createEvent, deleteEvent, fetchEventWithParticipants, joinEvent, leaveEvent } =
     useEvents(pseudo)
@@ -145,36 +147,49 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
-      <Navbar pseudo={pseudo} onChangePseudo={() => setShowPseudoSetup(true)} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Navbar
+        pseudo={pseudo}
+        onChangePseudo={() => setShowPseudoSetup(true)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+      />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        {error && (
-          <div className="mb-4 p-4 bg-red-900/30 border border-red-500/40 rounded-xl text-red-300 text-sm">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-500">
-            <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-            <span className="text-sm">Chargement des événements…</span>
-          </div>
-        ) : searchQuery.trim() ? (
-          <SearchResults
-            events={filteredEvents}
-            allParticipants={allParticipants}
-            searchQuery={searchQuery}
-            currentPseudo={pseudo}
-            onEventClick={handleEventClick}
-          />
+      <main className={currentPage === 'guide' ? '' : 'container mx-auto px-4 py-6 max-w-6xl'}>
+        {currentPage === 'guide' ? (
+          <GuidePage />
         ) : (
-          <CalendarView
-            events={events}
-            currentPseudo={pseudo}
-            myParticipatedIds={myParticipatedIds}
-            onDateClick={handleDateClick}
-            onEventClick={handleEventClick}
-          />
+          <>
+            {error && (
+              <div className="mb-4 p-4 bg-red-900/30 border border-red-500/40 rounded-xl text-red-300 text-sm">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-500">
+                <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                <span className="text-sm">Chargement des événements…</span>
+              </div>
+            ) : searchQuery.trim() ? (
+              <SearchResults
+                events={filteredEvents}
+                allParticipants={allParticipants}
+                searchQuery={searchQuery}
+                currentPseudo={pseudo}
+                onEventClick={handleEventClick}
+              />
+            ) : (
+              <CalendarView
+                events={events}
+                currentPseudo={pseudo}
+                myParticipatedIds={myParticipatedIds}
+                onDateClick={handleDateClick}
+                onEventClick={handleEventClick}
+              />
+            )}
+          </>
         )}
       </main>
 
