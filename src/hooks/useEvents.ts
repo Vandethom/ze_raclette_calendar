@@ -2,8 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { GuildEvent, GuildEventWithParticipants, CreateEventInput } from '../types'
 
+export interface ParticipantSummary {
+  event_id: string
+  pseudo: string
+}
+
 export function useEvents(currentPseudo: string) {
   const [events, setEvents] = useState<GuildEvent[]>([])
+  const [allParticipants, setAllParticipants] = useState<ParticipantSummary[]>([])
   const [myParticipatedIds, setMyParticipatedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -12,16 +18,19 @@ export function useEvents(currentPseudo: string) {
     try {
       const [eventsRes, partRes] = await Promise.all([
         supabase.from('events').select('*').order('date_start', { ascending: true }),
-        currentPseudo
-          ? supabase.from('participants').select('event_id').eq('pseudo', currentPseudo)
-          : Promise.resolve({ data: [], error: null }),
+        supabase.from('participants').select('event_id, pseudo'),
       ])
 
       if (eventsRes.error) throw eventsRes.error
       setEvents(eventsRes.data ?? [])
 
-      if (partRes.data) {
-        setMyParticipatedIds(new Set(partRes.data.map((p) => p.event_id)))
+      const parts: ParticipantSummary[] = partRes.data ?? []
+      setAllParticipants(parts)
+
+      if (currentPseudo) {
+        setMyParticipatedIds(new Set(
+          parts.filter((p) => p.pseudo === currentPseudo).map((p) => p.event_id)
+        ))
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur inconnue')
@@ -85,6 +94,7 @@ export function useEvents(currentPseudo: string) {
 
   return {
     events,
+    allParticipants,
     myParticipatedIds,
     loading,
     error,

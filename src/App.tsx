@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { isSupabaseConfigured } from './lib/supabase'
 import { Navbar } from './components/Navbar'
 import { CalendarView } from './components/CalendarView'
+import { SearchResults } from './components/SearchResults'
 import { CreateEventModal } from './components/CreateEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
 import { PseudoSetup } from './components/PseudoSetup'
@@ -65,9 +66,19 @@ function App() {
   const [showPseudoSetup, setShowPseudoSetup] = useState(() => !localStorage.getItem(PSEUDO_KEY))
   const [createModalDate, setCreateModalDate] = useState<string | null>(null)
   const [detailEvent, setDetailEvent] = useState<GuildEventWithParticipants | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const { events, myParticipatedIds, loading, error, createEvent, deleteEvent, fetchEventWithParticipants, joinEvent, leaveEvent } =
+  const { events, allParticipants, myParticipatedIds, loading, error, createEvent, deleteEvent, fetchEventWithParticipants, joinEvent, leaveEvent } =
     useEvents(pseudo)
+
+  const filteredEvents = searchQuery.trim()
+    ? events.filter((e) => {
+        const q = searchQuery.trim().toLowerCase()
+        if (e.dungeon_name.toLowerCase().includes(q)) return true
+        if (e.creator_pseudo.toLowerCase().includes(q)) return true
+        return allParticipants.some((p) => p.event_id === e.id && p.pseudo.toLowerCase().includes(q))
+      })
+    : events
   const { toasts, addToast, dismissToast } = useToast()
 
   const handleSetPseudo = (newPseudo: string) => {
@@ -134,7 +145,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
-      <Navbar pseudo={pseudo} onChangePseudo={() => setShowPseudoSetup(true)} />
+      <Navbar pseudo={pseudo} onChangePseudo={() => setShowPseudoSetup(true)} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
         {error && (
@@ -148,6 +159,14 @@ function App() {
             <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
             <span className="text-sm">Chargement des événements…</span>
           </div>
+        ) : searchQuery.trim() ? (
+          <SearchResults
+            events={filteredEvents}
+            allParticipants={allParticipants}
+            searchQuery={searchQuery}
+            currentPseudo={pseudo}
+            onEventClick={handleEventClick}
+          />
         ) : (
           <CalendarView
             events={events}
