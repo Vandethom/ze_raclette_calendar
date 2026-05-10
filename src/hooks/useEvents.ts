@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import type { GuildEvent, GuildEventWithParticipants, CreateEventInput } from '../types'
+import type { GuildEvent, GuildEventWithParticipants, CreateEventInput, UpdateEventInput } from '../types'
 
 export interface ParticipantSummary {
   event_id: string
@@ -62,6 +62,12 @@ export function useEvents(currentPseudo: string) {
     return true
   }
 
+  const updateEvent = async (eventId: string, updates: UpdateEventInput): Promise<boolean> => {
+    const { error } = await supabase.from('events').update(updates).eq('id', eventId)
+    if (error) { setError(error.message); return false }
+    return true
+  }
+
   const joinEvent = async (eventId: string, pseudo: string, role?: string | null, playerClass?: string | null): Promise<{ ok: boolean; errorMsg?: string }> => {
     const payload: Record<string, unknown> = { event_id: eventId, pseudo }
     if (role) payload.role = role
@@ -104,6 +110,7 @@ export function useEvents(currentPseudo: string) {
     fetchEventWithParticipants,
     joinEvent,
     leaveEvent,
+    updateEvent,
     refetch: fetchEvents,
   }
 }

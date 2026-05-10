@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange } from 'lucide-react'
+import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange, Pencil, ShieldAlert } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { GuildEventWithParticipants } from '../types'
@@ -8,13 +8,15 @@ import { ROLES } from '../lib/roles'
 interface Props {
   event: GuildEventWithParticipants
   currentPseudo: string
+  isAdmin?: boolean
   onJoin: (role: string | null) => Promise<void>
   onLeave: () => Promise<void>
   onDelete: () => Promise<void>
+  onEdit?: () => void
   onClose: () => void
 }
 
-export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDelete, onClose }: Props) {
+export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeave, onDelete, onEdit, onClose }: Props) {
   const [loading, setLoading] = useState<'join' | 'leave' | 'delete' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [joinRole, setJoinRole] = useState('')
@@ -180,90 +182,138 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
 
           {/* Actions */}
           <div className="space-y-3 pt-1">
-            {/* Sélecteur de rôle + bouton rejoindre */}
-            {!isCreator && !hasJoined && !isFull && (
+
+            {/* ── Mode admin ── */}
+            {isAdmin && (
               <div className="space-y-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
-                    <Shield size={11} className="text-amber-400" />
-                    Ton rôle <span className="text-gray-600 font-normal">(optionnel)</span>
-                  </label>
-                  <select
-                    value={joinRole}
-                    onChange={(e) => { setJoinRole(e.target.value); setJoinCustomRole('') }}
-                    className="w-full bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition-colors appearance-none"
-                  >
-                    <option value="">— Aucun rôle —</option>
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                    <option value="__custom__">Autre (préciser)</option>
-                  </select>
-                  {joinRole === '__custom__' && (
-                    <input
-                      type="text"
-                      value={joinCustomRole}
-                      onChange={(e) => setJoinCustomRole(e.target.value)}
-                      placeholder="Ton rôle…"
-                      className="w-full mt-1.5 bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition-colors"
-                      maxLength={30}
-                    />
+                <p className="flex items-center gap-1.5 text-xs text-amber-400/70">
+                  <ShieldAlert size={12} /> Actions administrateur
+                </p>
+                {!confirmDelete ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={onEdit}
+                      className="flex-1 flex items-center justify-center gap-2 border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 py-2.5 rounded-lg transition-colors text-sm"
+                    >
+                      <Pencil size={14} /> Modifier
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex-1 flex items-center justify-center gap-2 border border-red-500/40 text-red-400 hover:bg-red-500/10 py-2.5 rounded-lg transition-colors text-sm"
+                    >
+                      <Trash2 size={14} /> Supprimer
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => withLoading('delete', onDelete)}
+                      disabled={loading !== null}
+                      className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
+                    >
+                      {loading === 'delete' ? 'Suppression…' : 'Confirmer la suppression'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="border border-[#30363d] text-gray-400 hover:text-white px-3 py-2.5 rounded-lg transition-colors text-sm"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Mode membre normal ── */}
+            {!isAdmin && (
+              <>
+                {/* Sélecteur de rôle + rejoindre */}
+                {!isCreator && !hasJoined && !isFull && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
+                        <Shield size={11} className="text-amber-400" />
+                        Ton rôle <span className="text-gray-600 font-normal">(optionnel)</span>
+                      </label>
+                      <select
+                        value={joinRole}
+                        onChange={(e) => { setJoinRole(e.target.value); setJoinCustomRole('') }}
+                        className="w-full bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition-colors appearance-none"
+                      >
+                        <option value="">— Aucun rôle —</option>
+                        {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        <option value="__custom__">Autre (préciser)</option>
+                      </select>
+                      {joinRole === '__custom__' && (
+                        <input
+                          type="text"
+                          value={joinCustomRole}
+                          onChange={(e) => setJoinCustomRole(e.target.value)}
+                          placeholder="Ton rôle…"
+                          className="w-full mt-1.5 bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition-colors"
+                          maxLength={30}
+                        />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => withLoading('join', () => onJoin(effectiveJoinRole || null))}
+                      disabled={loading !== null}
+                      className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                    >
+                      <UserPlus size={15} />
+                      {loading === 'join' ? 'Inscription…' : 'Rejoindre'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  {!isCreator && hasJoined && (
+                    <button
+                      onClick={() => withLoading('leave', onLeave)}
+                      disabled={loading !== null}
+                      className="flex-1 border border-red-500/50 text-red-400 hover:bg-red-500/10 disabled:opacity-50 py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                    >
+                      <UserMinus size={15} />
+                      {loading === 'leave' ? 'Désinscription…' : 'Quitter'}
+                    </button>
+                  )}
+
+                  {!isCreator && isFull && !hasJoined && (
+                    <div className="flex-1 text-center text-sm text-gray-500 py-2.5">
+                      Événement complet
+                    </div>
+                  )}
+
+                  {isCreator && !confirmDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="border border-[#30363d] text-gray-500 hover:text-red-400 hover:border-red-500/40 p-2.5 rounded-lg transition-colors"
+                      title="Supprimer l'événement"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+
+                  {isCreator && confirmDelete && (
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => withLoading('delete', onDelete)}
+                        disabled={loading !== null}
+                        className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
+                      >
+                        {loading === 'delete' ? 'Suppression…' : 'Confirmer la suppression'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="border border-[#30363d] text-gray-400 hover:text-white px-3 py-2.5 rounded-lg transition-colors text-sm"
+                      >
+                        Annuler
+                      </button>
+                    </div>
                   )}
                 </div>
-                <button
-                  onClick={() => withLoading('join', () => onJoin(effectiveJoinRole || null))}
-                  disabled={loading !== null}
-                  className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-                >
-                  <UserPlus size={15} />
-                  {loading === 'join' ? 'Inscription…' : 'Rejoindre'}
-                </button>
-              </div>
+              </>
             )}
-            <div className="flex gap-3">
-            {!isCreator && hasJoined && (
-              <button
-                onClick={() => withLoading('leave', onLeave)}
-                disabled={loading !== null}
-                className="flex-1 border border-red-500/50 text-red-400 hover:bg-red-500/10 disabled:opacity-50 py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <UserMinus size={15} />
-                {loading === 'leave' ? 'Désinscription…' : 'Quitter'}
-              </button>
-            )}
-
-            {!isCreator && isFull && !hasJoined && (
-              <div className="flex-1 text-center text-sm text-gray-500 py-2.5">
-                Événement complet
-              </div>
-            )}
-
-            {isCreator && !confirmDelete && (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="border border-[#30363d] text-gray-500 hover:text-red-400 hover:border-red-500/40 p-2.5 rounded-lg transition-colors"
-                title="Supprimer l'événement"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-
-            {isCreator && confirmDelete && (
-              <div className="flex gap-2 flex-1">
-                <button
-                  onClick={() => withLoading('delete', onDelete)}
-                  disabled={loading !== null}
-                  className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
-                >
-                  {loading === 'delete' ? 'Suppression…' : 'Confirmer la suppression'}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="border border-[#30363d] text-gray-400 hover:text-white px-3 py-2.5 rounded-lg transition-colors text-sm"
-                >
-                  Annuler
-                </button>
-              </div>
-            )}
-            </div>
           </div>
         </div>
       </div>

@@ -1,0 +1,194 @@
+import { useState } from 'react'
+import { X, Sword, Calendar, Clock, Users, Star, FileText, CalendarRange } from 'lucide-react'
+import type { GuildEventWithParticipants } from '../types'
+import type { UpdateEventInput } from '../types'
+
+interface Props {
+  event: GuildEventWithParticipants
+  onSubmit: (updates: UpdateEventInput) => Promise<boolean>
+  onClose: () => void
+}
+
+function toLocalDate(iso: string) {
+  const d = new Date(iso)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function toLocalTime(iso: string) {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+export function EditEventModal({ event, onSubmit, onClose }: Props) {
+  const isMultiDayInit = event.date_start.slice(0, 10) !== event.date_end.slice(0, 10)
+
+  const [dungeonName, setDungeonName] = useState(event.dungeon_name)
+  const [isMultiDay, setIsMultiDay] = useState(isMultiDayInit)
+  const [startDate, setStartDate] = useState(toLocalDate(event.date_start))
+  const [endDate, setEndDate] = useState(toLocalDate(event.date_end))
+  const [startTime, setStartTime] = useState(toLocalTime(event.date_start))
+  const [endTime, setEndTime] = useState(toLocalTime(event.date_end))
+  const [maxParticipants, setMaxParticipants] = useState(event.max_participants?.toString() ?? '')
+  const [level, setLevel] = useState(event.level?.toString() ?? '')
+  const [description, setDescription] = useState(event.description ?? '')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleToggleMultiDay = (checked: boolean) => {
+    setIsMultiDay(checked)
+    if (!checked) setEndDate(startDate)
+  }
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val)
+    if (endDate < val) setEndDate(val)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    const dateStart = isMultiDay
+      ? new Date(`${startDate}T00:00:00`).toISOString()
+      : new Date(`${startDate}T${startTime}:00`).toISOString()
+
+    const dateEnd = isMultiDay
+      ? new Date(`${endDate}T23:59:59`).toISOString()
+      : new Date(`${startDate}T${endTime}:00`).toISOString()
+
+    const ok = await onSubmit({
+      dungeon_name: dungeonName.trim(),
+      date_start: dateStart,
+      date_end: dateEnd,
+      max_participants: maxParticipants ? parseInt(maxParticipants) : null,
+      level: level ? parseInt(level) : null,
+      description: description.trim() || null,
+    })
+    setSubmitting(false)
+    if (ok) onClose()
+  }
+
+  const inputClass =
+    'w-full bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none transition-colors text-sm'
+  const labelClass = 'block text-sm font-medium text-gray-300 mb-1.5'
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-[#161b22] border border-amber-500/30 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#30363d]">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Sword className="text-amber-400" size={20} />
+            Modifier l'événement
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          <p className="text-xs text-gray-500 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
+            Modification en tant qu'administrateur — événement de{' '}
+            <span className="text-amber-400 font-medium">{event.creator_pseudo}</span>
+          </p>
+
+          {/* Nom */}
+          <div>
+            <label className={labelClass}>
+              <Sword size={13} className="inline mr-1 text-amber-400" />
+              Nom de l'événement <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={dungeonName}
+              onChange={(e) => setDungeonName(e.target.value)}
+              className={inputClass}
+              required
+            />
+          </div>
+
+          {/* Toggle multi-jours */}
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={isMultiDay}
+                onChange={(e) => handleToggleMultiDay(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-[#30363d] peer-checked:bg-amber-500 rounded-full transition-colors" />
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4" />
+            </div>
+            <span className="text-sm text-gray-300 group-hover:text-white transition-colors flex items-center gap-1.5">
+              <CalendarRange size={14} className="text-amber-400" />
+              Événement sur plusieurs jours
+            </span>
+          </label>
+
+          {/* Dates */}
+          {isMultiDay ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}><Calendar size={13} className="inline mr-1 text-amber-400" />Date de début <span className="text-red-400">*</span></label>
+                <input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className={inputClass} required />
+              </div>
+              <div>
+                <label className={labelClass}><Calendar size={13} className="inline mr-1 text-amber-400" />Date de fin <span className="text-red-400">*</span></label>
+                <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className={inputClass} required />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className={labelClass}><Calendar size={13} className="inline mr-1 text-amber-400" />Date <span className="text-red-400">*</span></label>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}><Clock size={13} className="inline mr-1 text-amber-400" />Début <span className="text-red-400">*</span></label>
+                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputClass} required />
+                </div>
+                <div>
+                  <label className={labelClass}><Clock size={13} className="inline mr-1 text-amber-400" />Fin <span className="text-red-400">*</span></label>
+                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputClass} required />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Places max + Niveau */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}><Users size={13} className="inline mr-1 text-amber-400" />Places max <span className="text-gray-500 font-normal">(optionnel)</span></label>
+              <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} min="2" max="20" placeholder="Ex : 4" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}><Star size={13} className="inline mr-1 text-amber-400" />Niveau <span className="text-gray-500 font-normal">(optionnel)</span></label>
+              <input type="number" value={level} onChange={(e) => setLevel(e.target.value)} min="1" max="230" placeholder="Ex : 200" className={inputClass} />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className={labelClass}><FileText size={13} className="inline mr-1 text-amber-400" />Description <span className="text-gray-500 font-normal">(optionnel)</span></label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={`${inputClass} resize-none`} />
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} className="flex-1 border border-[#30363d] text-gray-400 hover:text-white py-2.5 rounded-lg transition-colors text-sm">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !dungeonName.trim()}
+              className="flex-1 bg-amber-500 hover:bg-amber-400 disabled:bg-[#21262d] disabled:text-gray-600 text-black font-bold py-2.5 rounded-lg transition-colors text-sm"
+            >
+              {submitting ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

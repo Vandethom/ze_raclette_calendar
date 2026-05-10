@@ -26,3 +26,7 @@ export interface GuildEventWithParticipants extends GuildEvent {
 }
 
 export type CreateEventInput = Omit<GuildEvent, 'id' | 'created_at'>
+
+export type UpdateEventInput = Partial<Pick<GuildEvent,
+  'dungeon_name' | 'date_start' | 'date_end' | 'max_participants' | 'level' | 'description'
+>>

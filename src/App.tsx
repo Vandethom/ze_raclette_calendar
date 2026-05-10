@@ -5,15 +5,19 @@ import { CalendarView } from './components/CalendarView'
 import { SearchResults } from './components/SearchResults'
 import { GuidePage } from './components/GuidePage'
 import { CreateEventModal } from './components/CreateEventModal'
+import { EditEventModal } from './components/EditEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
+import { AdminPasswordModal } from './components/AdminPasswordModal'
 import { PseudoSetup } from './components/PseudoSetup'
 import { ToastContainer } from './components/Toast'
 import { useEvents } from './hooks/useEvents'
 import { useToast } from './hooks/useToast'
-import type { GuildEventWithParticipants, CreateEventInput } from './types'
+import type { GuildEventWithParticipants, CreateEventInput, UpdateEventInput } from './types'
 
 const PSEUDO_KEY = 'ze_raclette_pseudo'
 const CLASS_KEY = 'ze_raclette_class'
+const ADMIN_SESSION_KEY = 'ze_raclette_admin'
+const ADMIN_PSEUDO = 'BlueCheese'
 
 function SetupRequired() {
   return (
@@ -66,13 +70,20 @@ function App() {
   if (!isSupabaseConfigured) return <SetupRequired />
   const [pseudo, setPseudo] = useState<string>(() => localStorage.getItem(PSEUDO_KEY) ?? '')
   const [playerClass, setPlayerClass] = useState<string>(() => localStorage.getItem(CLASS_KEY) ?? '')
+  const [isAdmin, setIsAdmin] = useState(() =>
+    localStorage.getItem(PSEUDO_KEY) === ADMIN_PSEUDO &&
+    sessionStorage.getItem(ADMIN_SESSION_KEY) === '1'
+  )
   const [showPseudoSetup, setShowPseudoSetup] = useState(() => !localStorage.getItem(PSEUDO_KEY))
+  const [showAdminModal, setShowAdminModal] = useState(false)
+  const [pendingAdmin, setPendingAdmin] = useState<{ pseudo: string; playerClass: string } | null>(null)
   const [createModalDate, setCreateModalDate] = useState<string | null>(null)
   const [detailEvent, setDetailEvent] = useState<GuildEventWithParticipants | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState<'calendar' | 'guide'>('calendar')
 
-  const { events, allParticipants, myParticipatedIds, loading, error, createEvent, deleteEvent, fetchEventWithParticipants, joinEvent, leaveEvent } =
+  const { events, allParticipants, myParticipatedIds, loading, error, createEvent, deleteEvent, updateEvent, fetchEventWithParticipants, joinEvent, leaveEvent } =
     useEvents(pseudo)
 
   const filteredEvents = searchQuery.trim()
@@ -85,17 +96,45 @@ function App() {
     : events
   const { toasts, addToast, dismissToast } = useToast()
 
-  const handleSetPseudo = (newPseudo: string, newClass: string) => {
+  const applyProfile = (newPseudo: string, newClass: string) => {
     setPseudo(newPseudo)
     setPlayerClass(newClass)
     localStorage.setItem(PSEUDO_KEY, newPseudo)
     if (newClass) localStorage.setItem(CLASS_KEY, newClass)
     else localStorage.removeItem(CLASS_KEY)
-    setShowPseudoSetup(false)
+  }
+
+  const handleSetPseudo = (newPseudo: string, newClass: string) => {
+    if (newPseudo === ADMIN_PSEUDO && import.meta.env.VITE_ADMIN_PASSWORD) {
+      setPendingAdmin({ pseudo: newPseudo, playerClass: newClass })
+      setShowPseudoSetup(false)
+      setShowAdminModal(true)
+    } else {
+      applyProfile(newPseudo, newClass)
+      setIsAdmin(false)
+      sessionStorage.removeItem(ADMIN_SESSION_KEY)
+      setShowPseudoSetup(false)
+    }
+  }
+
+  const handleAdminSuccess = () => {
+    if (!pendingAdmin) return
+    applyProfile(pendingAdmin.pseudo, pendingAdmin.playerClass)
+    setIsAdmin(true)
+    sessionStorage.setItem(ADMIN_SESSION_KEY, '1')
+    setPendingAdmin(null)
+    setShowAdminModal(false)
+  }
+
+  const handleAdminCancel = () => {
+    setPendingAdmin(null)
+    setShowAdminModal(false)
+    setShowPseudoSetup(true)
   }
 
   const handleDateClick = (dateStr: string) => {
     if (!pseudo) { setShowPseudoSetup(true); return }
+    if (isAdmin) return
     setCreateModalDate(dateStr)
   }
 
@@ -150,6 +189,20 @@ function App() {
     }
   }
 
+  const handleEditEvent = async (updates: UpdateEventInput): Promise<boolean> => {
+    if (!detailEvent) return false
+    const ok = await updateEvent(detailEvent.id, updates)
+    if (ok) {
+      addToast('Événement modifié.', 'success')
+      setShowEditModal(false)
+      const updated = await fetchEventWithParticipants(detailEvent.id)
+      if (updated) setDetailEvent(updated)
+      return true
+    }
+    addToast('Impossible de modifier l\'événement.', 'error')
+    return false
+  }
+
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
       <Navbar
@@ -199,8 +252,8 @@ function App() {
         )}
       </main>
 
-      {/* Bouton flottant pour créer un événement (mobile) */}
-      {pseudo && (
+      {/* Bouton flottant pour créer un événement (mobile) — masqué pour l'admin */}
+      {pseudo && !isAdmin && (
         <button
           onClick={() => setCreateModalDate(new Date().toISOString())}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 rounded-full shadow-xl transition-colors text-sm"
@@ -228,10 +281,27 @@ function App() {
         <EventDetailModal
           event={detailEvent}
           currentPseudo={pseudo}
+          isAdmin={isAdmin}
           onJoin={handleJoin}
           onLeave={handleLeave}
           onDelete={handleDelete}
-          onClose={() => setDetailEvent(null)}
+          onEdit={() => setShowEditModal(true)}
+          onClose={() => { setDetailEvent(null); setShowEditModal(false) }}
+        />
+      )}
+
+      {detailEvent && showEditModal && (
+        <EditEventModal
+          event={detailEvent}
+          onSubmit={handleEditEvent}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
+
+      {showAdminModal && (
+        <AdminPasswordModal
+          onSuccess={handleAdminSuccess}
+          onCancel={handleAdminCancel}
         />
       )}
 
