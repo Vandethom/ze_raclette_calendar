@@ -53,10 +53,12 @@ export function useEvents(currentPseudo: string) {
     return true
   }
 
-  const joinEvent = async (eventId: string, pseudo: string): Promise<boolean> => {
-    const { error } = await supabase.from('participants').insert({ event_id: eventId, pseudo })
-    if (error) { setError(error.message); return false }
-    return true
+  const joinEvent = async (eventId: string, pseudo: string, role?: string | null): Promise<{ ok: boolean; errorMsg?: string }> => {
+    const payload: Record<string, unknown> = { event_id: eventId, pseudo }
+    if (role) payload.role = role   // n'envoie pas role: null si la colonne n'existe pas encore
+    const { error } = await supabase.from('participants').insert(payload)
+    if (error) { setError(error.message); return { ok: false, errorMsg: error.message } }
+    return { ok: true }
   }
 
   const leaveEvent = async (eventId: string, pseudo: string): Promise<boolean> => {

@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText } from 'lucide-react'
+import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { GuildEventWithParticipants } from '../types'
+import { ROLES } from '../lib/roles'
 
 interface Props {
   event: GuildEventWithParticipants
   currentPseudo: string
-  onJoin: () => Promise<void>
+  onJoin: (role: string | null) => Promise<void>
   onLeave: () => Promise<void>
   onDelete: () => Promise<void>
   onClose: () => void
@@ -16,17 +17,21 @@ interface Props {
 export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDelete, onClose }: Props) {
   const [loading, setLoading] = useState<'join' | 'leave' | 'delete' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [joinRole, setJoinRole] = useState('')
+  const [joinCustomRole, setJoinCustomRole] = useState('')
+
+  const effectiveJoinRole = joinRole === '__custom__' ? joinCustomRole.trim() : joinRole
 
   const isCreator = event.creator_pseudo === currentPseudo
   const hasJoined = event.participants.some((p) => p.pseudo === currentPseudo)
-  const totalCount = event.participants.length + 1 // +1 créateur
+  const totalCount = event.participants.length + 1
   const isFull = event.max_participants !== null && totalCount >= event.max_participants
 
   const dateStart = new Date(event.date_start)
   const dateEnd = new Date(event.date_end)
+  const isMultiDay = event.date_start.slice(0, 10) !== event.date_end.slice(0, 10)
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
-  const dayStr = capitalize(format(dateStart, 'EEEE dd MMMM yyyy', { locale: fr }))
 
   const withLoading = async (key: typeof loading, fn: () => Promise<void>) => {
     setLoading(key)
@@ -54,24 +59,52 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          {/* Organisateur */}
-          <p className="text-sm text-gray-400">
-            Organisé par{' '}
-            <span className="text-amber-400 font-semibold">{event.creator_pseudo}</span>
-          </p>
+          {/* Organisateur + rôle */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              Organisé par{' '}
+              <span className="text-amber-400 font-semibold">{event.creator_pseudo}</span>
+            </p>
+            {event.creator_role && (
+              <span className="flex items-center gap-1 text-xs bg-amber-500/10 border border-amber-500/30 text-amber-300 px-2.5 py-1 rounded-full">
+                <Shield size={11} />
+                {event.creator_role}
+              </span>
+            )}
+          </div>
 
           {/* Date & heure */}
           <div className="bg-[#0d1117] rounded-xl p-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar size={14} className="text-amber-400 flex-shrink-0" />
-              <span className="text-white">{dayStr}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock size={14} className="text-amber-400 flex-shrink-0" />
-              <span className="text-white">
-                {format(dateStart, 'HH:mm')} – {format(dateEnd, 'HH:mm')}
-              </span>
-            </div>
+            {isMultiDay ? (
+              <div className="flex items-start gap-2 text-sm">
+                <CalendarRange size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <span className="text-white">
+                  Du{' '}
+                  <span className="font-medium">
+                    {capitalize(format(dateStart, 'EEEE dd MMMM', { locale: fr }))}
+                  </span>
+                  {' '}au{' '}
+                  <span className="font-medium">
+                    {capitalize(format(dateEnd, 'EEEE dd MMMM yyyy', { locale: fr }))}
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar size={14} className="text-amber-400 flex-shrink-0" />
+                  <span className="text-white">
+                    {capitalize(format(dateStart, 'EEEE dd MMMM yyyy', { locale: fr }))}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock size={14} className="text-amber-400 flex-shrink-0" />
+                  <span className="text-white">
+                    {format(dateStart, 'HH:mm')} – {format(dateEnd, 'HH:mm')}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Participants */}
@@ -98,17 +131,27 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
             )}
 
             <div className="space-y-1.5">
-              {/* Créateur toujours en premier */}
+              {/* Créateur */}
               <div className="flex items-center gap-2 text-sm">
                 <Star size={12} className="text-amber-400 flex-shrink-0" />
                 <span className="text-white">{event.creator_pseudo}</span>
+                {event.creator_role && (
+                  <span className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
+                    {event.creator_role}
+                  </span>
+                )}
                 <span className="ml-auto text-[11px] text-amber-400/60">Organisateur</span>
               </div>
-
+              {/* Participants */}
               {event.participants.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 text-sm">
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.pseudo === currentPseudo ? 'bg-blue-400' : 'bg-gray-500'}`} />
                   <span className="text-white">{p.pseudo}</span>
+                  {p.role && (
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${p.pseudo === currentPseudo ? 'text-blue-300 bg-blue-500/10 border-blue-500/20' : 'text-gray-400 bg-[#0d1117] border-[#30363d]'}`}>
+                      {p.role}
+                    </span>
+                  )}
                   {p.pseudo === currentPseudo && (
                     <span className="ml-auto text-[11px] text-blue-400/60">Toi</span>
                   )}
@@ -126,18 +169,46 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-1">
+          <div className="space-y-3 pt-1">
+            {/* Sélecteur de rôle + bouton rejoindre */}
             {!isCreator && !hasJoined && !isFull && (
-              <button
-                onClick={() => withLoading('join', onJoin)}
-                disabled={loading !== null}
-                className="flex-1 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <UserPlus size={15} />
-                {loading === 'join' ? 'Inscription…' : 'Rejoindre'}
-              </button>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
+                    <Shield size={11} className="text-amber-400" />
+                    Ton rôle <span className="text-gray-600 font-normal">(optionnel)</span>
+                  </label>
+                  <select
+                    value={joinRole}
+                    onChange={(e) => { setJoinRole(e.target.value); setJoinCustomRole('') }}
+                    className="w-full bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition-colors appearance-none"
+                  >
+                    <option value="">— Aucun rôle —</option>
+                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    <option value="__custom__">Autre (préciser)</option>
+                  </select>
+                  {joinRole === '__custom__' && (
+                    <input
+                      type="text"
+                      value={joinCustomRole}
+                      onChange={(e) => setJoinCustomRole(e.target.value)}
+                      placeholder="Ton rôle…"
+                      className="w-full mt-1.5 bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition-colors"
+                      maxLength={30}
+                    />
+                  )}
+                </div>
+                <button
+                  onClick={() => withLoading('join', () => onJoin(effectiveJoinRole || null))}
+                  disabled={loading !== null}
+                  className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <UserPlus size={15} />
+                  {loading === 'join' ? 'Inscription…' : 'Rejoindre'}
+                </button>
+              </div>
             )}
-
+            <div className="flex gap-3">
             {!isCreator && hasJoined && (
               <button
                 onClick={() => withLoading('leave', onLeave)}
@@ -182,6 +253,7 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

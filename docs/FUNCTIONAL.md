@@ -21,11 +21,19 @@ Un événement représente une activité planifiée en jeu. Il contient :
 |--------------------|-------------|-------------|
 | `dungeon_name`     | Oui         | Nom du donjon ou de l'activité |
 | `creator_pseudo`   | Oui         | Pseudo du membre organisateur |
-| `date_start`       | Oui         | Date et heure de début |
-| `date_end`         | Oui         | Date et heure de fin |
+| `creator_role`     | Non         | Rôle de l'organisateur (Tank, Heal, Ret PM, Do Pou, Do Crit, ou texte libre) |
+| `date_start`       | Oui         | Date (et heure pour événements courts) de début |
+| `date_end`         | Oui         | Date (et heure pour événements courts) de fin |
 | `max_participants` | Non         | Nombre maximum de personnes (créateur inclus). Entre 2 et 20 |
 | `level`            | Non         | Niveau requis / suggéré (1–230) |
 | `description`      | Non         | Notes libres (prérequis, stuff attendu…) |
+
+### Événements longue durée
+Quand `date_start` et `date_end` sont sur des jours différents, l'événement est considéré **longue durée** :
+- Il est stocké avec `date_start = 00:00:00` et `date_end = 23:59:59` du dernier jour.
+- Il s'affiche dans la **bande "Long"** (all-day) du calendrier semaine.
+- En vue mois, il s'étire sur tous les jours couverts.
+- La fiche de détail affiche une plage "Du [date début] au [date fin]" au lieu d'un horaire.
 
 ### Participants
 - Les membres qui rejoignent un événement sont des **participants**.

@@ -113,6 +113,23 @@
   background-color: #0d1117;
 }
 
+/* Bandeau "all-day" (événements longue durée) */
+.fc-dofus .fc-timegrid-axis-cushion,
+.fc-dofus .fc-daygrid-day-frame {
+  background-color: #0d1117;
+}
+
+.fc-dofus .fc-timegrid-allday .fc-timegrid-axis-cushion {
+  color: #8b949e;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fc-dofus .fc-daygrid-body-natural .fc-daygrid-day-events {
+  min-height: 0;
+}
+
 /* Scrollbar personnalisée */
 ::-webkit-scrollbar {
   width: 8px;

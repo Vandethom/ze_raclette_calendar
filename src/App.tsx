@@ -97,15 +97,15 @@ function App() {
     return false
   }
 
-  const handleJoin = async () => {
+  const handleJoin = async (role: string | null) => {
     if (!detailEvent) return
-    const ok = await joinEvent(detailEvent.id, pseudo)
+    const { ok, errorMsg } = await joinEvent(detailEvent.id, pseudo, role)
     if (ok) {
       addToast(`Tu as rejoint "${detailEvent.dungeon_name}" !`, 'success')
       const updated = await fetchEventWithParticipants(detailEvent.id)
       if (updated) setDetailEvent(updated)
     } else {
-      addToast('Impossible de rejoindre l\'événement.', 'error')
+      addToast(errorMsg ?? 'Impossible de rejoindre l\'événement.', 'error')
     }
   }
 
