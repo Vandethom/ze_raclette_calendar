@@ -3,6 +3,7 @@ export interface GuildEvent {
   dungeon_name: string
   creator_pseudo: string
   creator_role: string | null
+  creator_class: string | null
   date_start: string
   date_end: string
   max_participants: number | null
@@ -16,6 +17,7 @@ export interface Participant {
   event_id: string
   pseudo: string
   role: string | null
+  player_class: string | null
   joined_at: string
 }
 

@@ -13,6 +13,7 @@ import { useToast } from './hooks/useToast'
 import type { GuildEventWithParticipants, CreateEventInput } from './types'
 
 const PSEUDO_KEY = 'ze_raclette_pseudo'
+const CLASS_KEY = 'ze_raclette_class'
 
 function SetupRequired() {
   return (
@@ -64,6 +65,7 @@ function SetupRequired() {
 function App() {
   if (!isSupabaseConfigured) return <SetupRequired />
   const [pseudo, setPseudo] = useState<string>(() => localStorage.getItem(PSEUDO_KEY) ?? '')
+  const [playerClass, setPlayerClass] = useState<string>(() => localStorage.getItem(CLASS_KEY) ?? '')
   const [showPseudoSetup, setShowPseudoSetup] = useState(() => !localStorage.getItem(PSEUDO_KEY))
   const [createModalDate, setCreateModalDate] = useState<string | null>(null)
   const [detailEvent, setDetailEvent] = useState<GuildEventWithParticipants | null>(null)
@@ -83,9 +85,12 @@ function App() {
     : events
   const { toasts, addToast, dismissToast } = useToast()
 
-  const handleSetPseudo = (newPseudo: string) => {
+  const handleSetPseudo = (newPseudo: string, newClass: string) => {
     setPseudo(newPseudo)
+    setPlayerClass(newClass)
     localStorage.setItem(PSEUDO_KEY, newPseudo)
+    if (newClass) localStorage.setItem(CLASS_KEY, newClass)
+    else localStorage.removeItem(CLASS_KEY)
     setShowPseudoSetup(false)
   }
 
@@ -112,7 +117,7 @@ function App() {
 
   const handleJoin = async (role: string | null) => {
     if (!detailEvent) return
-    const { ok, errorMsg } = await joinEvent(detailEvent.id, pseudo, role)
+    const { ok, errorMsg } = await joinEvent(detailEvent.id, pseudo, role, playerClass || null)
     if (ok) {
       addToast(`Tu as rejoint "${detailEvent.dungeon_name}" !`, 'success')
       const updated = await fetchEventWithParticipants(detailEvent.id)
@@ -149,6 +154,7 @@ function App() {
     <div className="min-h-screen bg-[#0d1117] text-white">
       <Navbar
         pseudo={pseudo}
+        playerClass={playerClass}
         onChangePseudo={() => setShowPseudoSetup(true)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -205,13 +211,14 @@ function App() {
 
       {/* Modals */}
       {showPseudoSetup && (
-        <PseudoSetup onSetPseudo={handleSetPseudo} currentPseudo={pseudo} />
+        <PseudoSetup onSetPseudo={handleSetPseudo} currentPseudo={pseudo} currentClass={playerClass} />
       )}
 
       {createModalDate !== null && (
         <CreateEventModal
           initialDate={createModalDate}
           creatorPseudo={pseudo}
+          creatorClass={playerClass}
           onSubmit={handleCreateEvent}
           onClose={() => setCreateModalDate(null)}
         />

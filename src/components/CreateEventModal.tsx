@@ -6,11 +6,12 @@ import { ROLES } from '../lib/roles'
 interface Props {
   initialDate?: string
   creatorPseudo: string
+  creatorClass?: string
   onSubmit: (data: CreateEventInput) => Promise<boolean>
   onClose: () => void
 }
 
-export function CreateEventModal({ initialDate, creatorPseudo, onSubmit, onClose }: Props) {
+export function CreateEventModal({ initialDate, creatorPseudo, creatorClass, onSubmit, onClose }: Props) {
   const today = new Date().toISOString().slice(0, 10)
   const initDate = initialDate?.slice(0, 10) ?? today
 
@@ -56,6 +57,7 @@ export function CreateEventModal({ initialDate, creatorPseudo, onSubmit, onClose
       dungeon_name: dungeonName.trim(),
       creator_pseudo: creatorPseudo,
       creator_role: effectiveRole || null,
+      creator_class: creatorClass || null,
       date_start: dateStart,
       date_end: dateEnd,
       max_participants: maxParticipants ? parseInt(maxParticipants) : null,

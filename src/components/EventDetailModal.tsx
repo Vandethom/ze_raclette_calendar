@@ -135,6 +135,11 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
               <div className="flex items-center gap-2 text-sm">
                 <Star size={12} className="text-amber-400 flex-shrink-0" />
                 <span className="text-white">{event.creator_pseudo}</span>
+                {event.creator_class && (
+                  <span className="text-[11px] text-amber-400/70 bg-amber-500/8 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
+                    {event.creator_class}
+                  </span>
+                )}
                 {event.creator_role && (
                   <span className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
                     {event.creator_role}
@@ -147,6 +152,11 @@ export function EventDetailModal({ event, currentPseudo, onJoin, onLeave, onDele
                 <div key={p.id} className="flex items-center gap-2 text-sm">
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.pseudo === currentPseudo ? 'bg-blue-400' : 'bg-gray-500'}`} />
                   <span className="text-white">{p.pseudo}</span>
+                  {p.player_class && (
+                    <span className="text-[11px] text-gray-500 bg-[#0d1117] border border-[#30363d] px-1.5 py-0.5 rounded-full">
+                      {p.player_class}
+                    </span>
+                  )}
                   {p.role && (
                     <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${p.pseudo === currentPseudo ? 'text-blue-300 bg-blue-500/10 border-blue-500/20' : 'text-gray-400 bg-[#0d1117] border-[#30363d]'}`}>
                       {p.role}

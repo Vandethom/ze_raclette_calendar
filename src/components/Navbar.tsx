@@ -2,6 +2,7 @@ import { Sword, User, Pencil, Search, X, BookOpen, CalendarDays } from 'lucide-r
 
 interface Props {
   pseudo: string
+  playerClass?: string
   onChangePseudo: () => void
   searchQuery: string
   onSearchChange: (q: string) => void
@@ -9,7 +10,7 @@ interface Props {
   onNavigate: (page: 'calendar' | 'guide') => void
 }
 
-export function Navbar({ pseudo, onChangePseudo, searchQuery, onSearchChange, currentPage, onNavigate }: Props) {
+export function Navbar({ pseudo, playerClass, onChangePseudo, searchQuery, onSearchChange, currentPage, onNavigate }: Props) {
   return (
     <nav className="bg-[#161b22] border-b border-[#30363d] sticky top-0 z-40">
       <div className="container mx-auto px-4 py-3 flex items-center gap-3">
@@ -74,8 +75,13 @@ export function Navbar({ pseudo, onChangePseudo, searchQuery, onSearchChange, cu
           title="Changer de pseudo"
         >
           <User size={14} className="text-amber-400" />
-          <span className="text-white text-sm font-medium max-w-[100px] truncate hidden sm:inline">
-            {pseudo || 'Mon pseudo'}
+          <span className="hidden sm:flex flex-col items-start leading-none">
+            <span className="text-white text-sm font-medium max-w-[100px] truncate">
+              {pseudo || 'Mon pseudo'}
+            </span>
+            {playerClass && (
+              <span className="text-[10px] text-amber-400/60 mt-0.5">{playerClass}</span>
+            )}
           </span>
           <Pencil size={12} className="text-gray-600 group-hover:text-amber-400 transition-colors" />
         </button>
