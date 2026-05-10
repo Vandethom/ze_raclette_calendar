@@ -8,7 +8,7 @@ Bienvenue sur le calendrier de la guilde ! Ce guide t'explique tout ce que tu pe
 
 À ta première visite, une fenêtre s'ouvre et te demande ton **pseudo en jeu**.
 
-- Saisis exactement ton pseudo Dofus (celui que tes collègues reconnaissent)
+- Saisis exactement ton pseudo Dofus (celui que tes collègues reconnaissent) ainsi que ta classe en jeu
 - Clique **Confirmer**
 - Ce pseudo est retenu pour toutes tes prochaines visites
 
