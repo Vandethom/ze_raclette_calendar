@@ -27,17 +27,27 @@ export function CalendarView({
     const hasJoined = myParticipatedIds.has(event.id)
     const isInvolved = isMine || hasJoined
 
-    // Détecte les événements multi-jours pour les afficher en all-day
-    const startDay = event.date_start.slice(0, 10)
-    const endDay = event.date_end.slice(0, 10)
-    const isMultiDay = startDay !== endDay
+    // Comparaison en dates LOCALES (pas UTC) pour éviter le décalage horaire.
+    // toLocaleDateString('sv') donne "YYYY-MM-DD" dans le fuseau du navigateur.
+    const localStart = new Date(event.date_start).toLocaleDateString('sv')
+    const localEnd   = new Date(event.date_end).toLocaleDateString('sv')
+    const durationMs = new Date(event.date_end).getTime() - new Date(event.date_start).getTime()
+    // Multi-jour = jours locaux différents ET durée > 20h (évite les événements qui chevauchent minuit)
+    const isMultiDay = localStart !== localEnd && durationMs > 20 * 3_600_000
 
-    // Pour les allDay, FullCalendar utilise une fin exclusive : on ajoute 1 jour
-    let fcEnd: string = event.date_end
+    let fcStart: string
+    let fcEnd: string
+
     if (isMultiDay) {
-      const d = new Date(event.date_end)
-      d.setDate(d.getDate() + 1)
-      fcEnd = d.toISOString().slice(0, 10)
+      // FullCalendar allDay utilise une fin exclusive : on ajoute 1 jour en heure locale
+      const endPlusOne = new Date(event.date_end)
+      endPlusOne.setDate(endPlusOne.getDate() + 1)
+      fcStart = localStart
+      fcEnd   = endPlusOne.toLocaleDateString('sv')
+    } else {
+      // Événement ponctuel : on passe les ISO UTC, FullCalendar affiche en heure locale
+      fcStart = event.date_start
+      fcEnd   = event.date_end
     }
 
     const roleLabel = event.creator_role ? ` · ${event.creator_role}` : ''
@@ -47,7 +57,7 @@ export function CalendarView({
     return {
       id: event.id,
       title,
-      start: isMultiDay ? startDay : event.date_start,
+      start: fcStart,
       end: fcEnd,
       allDay: isMultiDay,
       backgroundColor: isInvolved ? '#f59e0b' : '#3b82f6',
