@@ -9,10 +9,20 @@ import { EditEventModal } from './components/EditEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
 import { AdminPasswordModal } from './components/AdminPasswordModal'
 import { PseudoSetup } from './components/PseudoSetup'
+import { WishesPanel } from './components/WishesPanel'
+import { CreateWishModal } from './components/CreateWishModal'
+import { WishDetailModal } from './components/WishDetailModal'
 import { ToastContainer } from './components/Toast'
 import { useEvents } from './hooks/useEvents'
+import { useWishes } from './hooks/useWishes'
 import { useToast } from './hooks/useToast'
-import type { GuildEventWithParticipants, CreateEventInput, UpdateEventInput } from './types'
+import type {
+  GuildEventWithParticipants,
+  CreateEventInput,
+  UpdateEventInput,
+  CreateWishInput,
+  EventPrefill,
+} from './types'
 
 const PSEUDO_KEY = 'ze_raclette_pseudo'
 const CLASS_KEY = 'ze_raclette_class'
@@ -68,6 +78,7 @@ function SetupRequired() {
 
 function App() {
   if (!isSupabaseConfigured) return <SetupRequired />
+
   const [pseudo, setPseudo] = useState<string>(() => localStorage.getItem(PSEUDO_KEY) ?? '')
   const [playerClass, setPlayerClass] = useState<string>(() => localStorage.getItem(CLASS_KEY) ?? '')
   const [isAdmin, setIsAdmin] = useState(() =>
@@ -77,14 +88,42 @@ function App() {
   const [showPseudoSetup, setShowPseudoSetup] = useState(() => !localStorage.getItem(PSEUDO_KEY))
   const [showAdminModal, setShowAdminModal] = useState(false)
   const [pendingAdmin, setPendingAdmin] = useState<{ pseudo: string; playerClass: string } | null>(null)
+
+  // Événements planifiés
   const [createModalDate, setCreateModalDate] = useState<string | null>(null)
+  const [createModalPrefill, setCreateModalPrefill] = useState<EventPrefill | undefined>(undefined)
+  const [pendingConvertWishId, setPendingConvertWishId] = useState<string | null>(null)
   const [detailEvent, setDetailEvent] = useState<GuildEventWithParticipants | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+
+  // Envies
+  const [showCreateWishModal, setShowCreateWishModal] = useState(false)
+  const [detailWishId, setDetailWishId] = useState<string | null>(null)
+
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState<'calendar' | 'guide'>('calendar')
 
-  const { events, allParticipants, myParticipatedIds, loading, error, createEvent, deleteEvent, updateEvent, fetchEventWithParticipants, joinEvent, leaveEvent } =
-    useEvents(pseudo)
+  const {
+    events,
+    allParticipants,
+    myParticipatedIds,
+    loading,
+    error,
+    createEvent,
+    deleteEvent,
+    updateEvent,
+    fetchEventWithParticipants,
+    joinEvent,
+    leaveEvent,
+  } = useEvents(pseudo)
+
+  const {
+    wishes,
+    wishAvailabilities,
+    createWish,
+    convertWish,
+    deleteWish,
+  } = useWishes()
 
   const filteredEvents = searchQuery.trim()
     ? events.filter((e) => {
@@ -94,6 +133,7 @@ function App() {
         return allParticipants.some((p) => p.event_id === e.id && p.pseudo.toLowerCase().includes(q))
       })
     : events
+
   const { toasts, addToast, dismissToast } = useToast()
 
   const applyProfile = (newPseudo: string, newClass: string) => {
@@ -135,6 +175,7 @@ function App() {
   const handleDateClick = (dateStr: string) => {
     if (!pseudo) { setShowPseudoSetup(true); return }
     if (isAdmin) return
+    setCreateModalPrefill(undefined)
     setCreateModalDate(dateStr)
   }
 
@@ -148,6 +189,11 @@ function App() {
     const result = await createEvent(data)
     if (result) {
       addToast('Événement créé avec succès !', 'success')
+      if (pendingConvertWishId) {
+        await convertWish(pendingConvertWishId, result.id)
+        addToast('Envie convertie en événement !', 'success')
+        setPendingConvertWishId(null)
+      }
       return true
     }
     addToast('Erreur lors de la création.', 'error')
@@ -203,6 +249,32 @@ function App() {
     return false
   }
 
+  // ── Envies ───────────────────────────────────────────────────────────────
+
+  const handleCreateWish = async (data: CreateWishInput): Promise<boolean> => {
+    const ok = await createWish(data)
+    if (ok) addToast('Activité proposée !', 'success')
+    else addToast('Erreur lors de la proposition.', 'error')
+    return ok
+  }
+
+  const handleWishConvert = (prefill: EventPrefill, wishId: string) => {
+    setDetailWishId(null)
+    setPendingConvertWishId(wishId)
+    setCreateModalPrefill(prefill)
+    setCreateModalDate(prefill.date ?? new Date().toISOString())
+  }
+
+  const handleDeleteWish = async (wishId: string) => {
+    const ok = await deleteWish(wishId)
+    if (ok) {
+      addToast('Envie supprimée.', 'success')
+      setDetailWishId(null)
+    } else {
+      addToast('Impossible de supprimer l\'envie.', 'error')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
       <Navbar
@@ -240,29 +312,43 @@ function App() {
                 onEventClick={handleEventClick}
               />
             ) : (
-              <CalendarView
-                events={events}
-                currentPseudo={pseudo}
-                myParticipatedIds={myParticipatedIds}
-                onDateClick={handleDateClick}
-                onEventClick={handleEventClick}
-              />
+              <>
+                <WishesPanel
+                  wishes={wishes}
+                  wishAvailabilities={wishAvailabilities}
+                  currentPseudo={pseudo}
+                  isAdmin={isAdmin}
+                  onOpenWish={(id) => setDetailWishId(id)}
+                  onCreateWish={() => {
+                    if (!pseudo) { setShowPseudoSetup(true); return }
+                    setShowCreateWishModal(true)
+                  }}
+                />
+                <CalendarView
+                  events={events}
+                  currentPseudo={pseudo}
+                  myParticipatedIds={myParticipatedIds}
+                  onDateClick={handleDateClick}
+                  onEventClick={handleEventClick}
+                />
+              </>
             )}
           </>
         )}
       </main>
 
-      {/* Bouton flottant pour créer un événement (mobile) — masqué pour l'admin */}
+      {/* Bouton flottant (mobile) — masqué pour l'admin */}
       {pseudo && !isAdmin && (
         <button
-          onClick={() => setCreateModalDate(new Date().toISOString())}
+          onClick={() => { setCreateModalPrefill(undefined); setCreateModalDate(new Date().toISOString()) }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 rounded-full shadow-xl transition-colors text-sm"
         >
           + Proposer un événement
         </button>
       )}
 
-      {/* Modals */}
+      {/* ── Modals ── */}
+
       {showPseudoSetup && (
         <PseudoSetup onSetPseudo={handleSetPseudo} currentPseudo={pseudo} currentClass={playerClass} />
       )}
@@ -270,10 +356,15 @@ function App() {
       {createModalDate !== null && (
         <CreateEventModal
           initialDate={createModalDate}
+          prefill={createModalPrefill}
           creatorPseudo={pseudo}
           creatorClass={playerClass}
           onSubmit={handleCreateEvent}
-          onClose={() => setCreateModalDate(null)}
+          onClose={() => {
+            setCreateModalDate(null)
+            setCreateModalPrefill(undefined)
+            setPendingConvertWishId(null)
+          }}
         />
       )}
 
@@ -302,6 +393,27 @@ function App() {
         <AdminPasswordModal
           onSuccess={handleAdminSuccess}
           onCancel={handleAdminCancel}
+        />
+      )}
+
+      {showCreateWishModal && (
+        <CreateWishModal
+          creatorPseudo={pseudo}
+          creatorClass={playerClass || null}
+          onSubmit={handleCreateWish}
+          onClose={() => setShowCreateWishModal(false)}
+        />
+      )}
+
+      {detailWishId && (
+        <WishDetailModal
+          wishId={detailWishId}
+          currentPseudo={pseudo}
+          playerClass={playerClass || null}
+          isAdmin={isAdmin}
+          onConvert={handleWishConvert}
+          onDelete={handleDeleteWish}
+          onClose={() => setDetailWishId(null)}
         />
       )}
 

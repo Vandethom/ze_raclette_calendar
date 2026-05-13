@@ -1,26 +1,27 @@
 import { useState } from 'react'
 import { X, Sword, Calendar, Clock, Users, Star, FileText, Shield, CalendarRange } from 'lucide-react'
-import type { CreateEventInput } from '../types'
+import type { CreateEventInput, EventPrefill } from '../types'
 import { ROLES } from '../lib/roles'
 
 interface Props {
   initialDate?: string
+  prefill?: EventPrefill
   creatorPseudo: string
   creatorClass?: string
   onSubmit: (data: CreateEventInput) => Promise<boolean>
   onClose: () => void
 }
 
-export function CreateEventModal({ initialDate, creatorPseudo, creatorClass, onSubmit, onClose }: Props) {
+export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorClass, onSubmit, onClose }: Props) {
   const today = new Date().toISOString().slice(0, 10)
-  const initDate = initialDate?.slice(0, 10) ?? today
+  const initDate = prefill?.date ?? initialDate?.slice(0, 10) ?? today
 
-  const [dungeonName, setDungeonName] = useState('')
+  const [dungeonName, setDungeonName] = useState(prefill?.activityName ?? '')
   const [isMultiDay, setIsMultiDay] = useState(false)
   const [startDate, setStartDate] = useState(initDate)
   const [endDate, setEndDate] = useState(initDate)
-  const [startTime, setStartTime] = useState(initialDate?.slice(11, 16) ?? '18:00')
-  const [endTime, setEndTime] = useState('20:00')
+  const [startTime, setStartTime] = useState(prefill?.startTime ?? initialDate?.slice(11, 16) ?? '18:00')
+  const [endTime, setEndTime] = useState(prefill?.endTime ?? '20:00')
   const [selectedRole, setSelectedRole] = useState('')
   const [customRole, setCustomRole] = useState('')
   const [maxParticipants, setMaxParticipants] = useState('')
