@@ -77,3 +77,19 @@ export interface EventPrefill {
   startTime?: string  // HH:MM
   endTime?: string    // HH:MM
 }
+
+// ─── Disponibilités hebdomadaires ────────────────────────────────────────────
+
+export interface PlayerProfile {
+  pseudo: string
+  player_class: string | null
+  availability_note: string | null
+  updated_at: string
+}
+
+export interface WeeklyAvailability {
+  id: string
+  pseudo: string
+  day_of_week: number   // 0 = Lundi … 6 = Dimanche
+  hour: number          // 0-23 (heure de début : 18 = disponible de 18h à 19h)
+}

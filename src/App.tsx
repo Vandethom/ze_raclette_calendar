@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar'
 import { CalendarView } from './components/CalendarView'
 import { SearchResults } from './components/SearchResults'
 import { GuidePage } from './components/GuidePage'
+import { AvailabilityPage } from './components/AvailabilityPage'
 import { CreateEventModal } from './components/CreateEventModal'
 import { EditEventModal } from './components/EditEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
@@ -28,6 +29,8 @@ const PSEUDO_KEY = 'ze_raclette_pseudo'
 const CLASS_KEY = 'ze_raclette_class'
 const ADMIN_SESSION_KEY = 'ze_raclette_admin'
 const ADMIN_PSEUDO = 'BlueCheese'
+
+type Page = 'calendar' | 'guide' | 'availabilities'
 
 function SetupRequired() {
   return (
@@ -89,6 +92,11 @@ function App() {
   const [showAdminModal, setShowAdminModal] = useState(false)
   const [pendingAdmin, setPendingAdmin] = useState<{ pseudo: string; playerClass: string } | null>(null)
 
+  // Navigation
+  const [currentPage, setCurrentPage] = useState<Page>('calendar')
+  // Pseudo dont on consulte le profil de dispos (null = propre profil)
+  const [availabilityViewPseudo, setAvailabilityViewPseudo] = useState<string | null>(null)
+
   // Événements planifiés
   const [createModalDate, setCreateModalDate] = useState<string | null>(null)
   const [createModalPrefill, setCreateModalPrefill] = useState<EventPrefill | undefined>(undefined)
@@ -101,7 +109,6 @@ function App() {
   const [detailWishId, setDetailWishId] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState<'calendar' | 'guide'>('calendar')
 
   const {
     events,
@@ -117,13 +124,7 @@ function App() {
     leaveEvent,
   } = useEvents(pseudo)
 
-  const {
-    wishes,
-    wishAvailabilities,
-    createWish,
-    convertWish,
-    deleteWish,
-  } = useWishes()
+  const { wishes, wishAvailabilities, createWish, convertWish, deleteWish } = useWishes()
 
   const filteredEvents = searchQuery.trim()
     ? events.filter((e) => {
@@ -275,6 +276,23 @@ function App() {
     }
   }
 
+  // ── Disponibilités ───────────────────────────────────────────────────────
+
+  const handleViewProfile = (targetPseudo: string) => {
+    setSearchQuery('')
+    setAvailabilityViewPseudo(targetPseudo === pseudo ? null : targetPseudo)
+    setCurrentPage('availabilities')
+  }
+
+  const handleNavigate = (page: Page) => {
+    if (page === 'availabilities') {
+      setAvailabilityViewPseudo(null)  // toujours son propre profil via navbar
+    }
+    setCurrentPage(page)
+  }
+
+  const availabilityTarget = availabilityViewPseudo ?? pseudo
+
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
       <Navbar
@@ -284,12 +302,19 @@ function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         currentPage={currentPage}
-        onNavigate={setCurrentPage}
+        onNavigate={handleNavigate}
       />
 
       <main className={currentPage === 'guide' ? '' : 'container mx-auto px-4 py-6 max-w-6xl'}>
         {currentPage === 'guide' ? (
           <GuidePage />
+        ) : currentPage === 'availabilities' ? (
+          <AvailabilityPage
+            targetPseudo={availabilityTarget}
+            isOwnProfile={!availabilityViewPseudo}
+            currentClass={playerClass || undefined}
+            onBack={() => setCurrentPage('calendar')}
+          />
         ) : (
           <>
             {error && (
@@ -310,6 +335,7 @@ function App() {
                 searchQuery={searchQuery}
                 currentPseudo={pseudo}
                 onEventClick={handleEventClick}
+                onViewProfile={handleViewProfile}
               />
             ) : (
               <>
@@ -337,8 +363,8 @@ function App() {
         )}
       </main>
 
-      {/* Bouton flottant (mobile) — masqué pour l'admin */}
-      {pseudo && !isAdmin && (
+      {/* Bouton flottant (mobile) */}
+      {pseudo && !isAdmin && currentPage === 'calendar' && (
         <button
           onClick={() => { setCreateModalPrefill(undefined); setCreateModalDate(new Date().toISOString()) }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden bg-amber-500 hover:bg-amber-400 text-black font-bold px-6 py-3 rounded-full shadow-xl transition-colors text-sm"
