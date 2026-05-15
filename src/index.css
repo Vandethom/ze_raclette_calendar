@@ -101,10 +101,87 @@
   font-size: 0.78rem;
   font-weight: 500;
   transition: filter 0.15s;
+  min-width: 0;
 }
 
 .fc-dofus .fc-event:hover {
   filter: brightness(1.15);
+}
+
+/* Événements en vue timeGrid : texte tronqué proprement quand étroit */
+.fc-dofus .fc-timegrid-event {
+  overflow: hidden;
+}
+
+.fc-dofus .fc-timegrid-event .fc-event-main {
+  padding: 2px 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fc-dofus .fc-timegrid-event .fc-event-time {
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+  line-height: 1.2;
+}
+
+.fc-dofus .fc-timegrid-event .fc-event-title {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* Événements dayGrid : même traitement */
+.fc-dofus .fc-event-title,
+.fc-dofus .fc-event-title-container {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-dofus .fc-daygrid-event .fc-event-main {
+  padding: 2px 4px;
+  overflow: hidden;
+}
+
+/* Chip "+N" en vue timeGrid (événements en surnombre) */
+.fc-dofus .fc-timegrid-more-link {
+  background-color: #21262d;
+  border: 1px solid #30363d;
+  color: #f59e0b;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.fc-dofus .fc-timegrid-more-link:hover {
+  background-color: #f59e0b;
+  color: #000;
+  border-color: #b45309;
+}
+
+/* Chip "+N" en vue dayGrid */
+.fc-dofus .fc-daygrid-more-link {
+  color: #f59e0b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+}
+
+.fc-dofus .fc-daygrid-more-link:hover {
+  background-color: rgba(245, 158, 11, 0.15);
 }
 
 /* Fond des cellules du calendrier */

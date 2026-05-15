@@ -75,7 +75,7 @@ export function CalendarView({
         headerToolbar={{
           left: 'prev,next today',
           center: 'title',
-          right: isMobile ? 'dayGridMonth' : 'dayGridMonth,timeGridWeek,timeGridDay',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay',
         }}
         events={fcEvents}
         dateClick={(info) => onDateClick(info.dateStr)}
@@ -89,6 +89,7 @@ export function CalendarView({
         nowIndicator
         eventDisplay="block"
         dayMaxEvents={isMobile ? 3 : false}
+        eventMaxStack={3}
       />
     </div>
   )

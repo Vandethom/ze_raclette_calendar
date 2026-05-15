@@ -33,7 +33,7 @@ export type UpdateEventInput = Partial<Pick<GuildEvent,
 
 // ─── Envies (activités sans date fixe) ──────────────────────────────────────
 
-export type WishSlotPeriod = 'afternoon' | 'evening' | 'night'
+export type WishSlotPeriod = 'morning' | 'afternoon' | 'evening' | 'night'
 
 export interface Wish {
   id: string

@@ -13,10 +13,11 @@ interface Props {
   onClose: () => void
 }
 
-const PERIODS: WishSlotPeriod[] = ['afternoon', 'evening', 'night']
+const PERIODS: WishSlotPeriod[] = ['morning', 'afternoon', 'evening', 'night']
 
 const PERIOD_CONFIG: Record<WishSlotPeriod, { label: string; time: string; icon: string; startTime: string; endTime: string }> = {
-  afternoon: { label: 'Après-midi', time: '14h–18h', icon: '🌤', startTime: '14:00', endTime: '18:00' },
+  morning:   { label: 'Matin',      time: '8h–12h',  icon: '🌅', startTime: '08:00', endTime: '12:00' },
+  afternoon: { label: 'Après-midi', time: '12h–18h', icon: '🌤', startTime: '12:00', endTime: '18:00' },
   evening:   { label: 'Soirée',     time: '18h–22h', icon: '🌆', startTime: '18:00', endTime: '22:00' },
   night:     { label: 'Nuit',       time: '22h–00h', icon: '🌙', startTime: '22:00', endTime: '23:59' },
 }
