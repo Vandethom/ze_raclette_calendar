@@ -5,6 +5,7 @@ import { CalendarView } from './components/CalendarView'
 import { SearchResults } from './components/SearchResults'
 import { GuidePage } from './components/GuidePage'
 import { AvailabilityPage } from './components/AvailabilityPage'
+import { StatsPage } from './components/StatsPage'
 import { CreateEventModal } from './components/CreateEventModal'
 import { EditEventModal } from './components/EditEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
@@ -31,7 +32,7 @@ const CLASS_KEY = 'ze_raclette_class'
 const ADMIN_SESSION_KEY = 'ze_raclette_admin'
 const ADMIN_PSEUDO = 'BlueCheese'
 
-type Page = 'calendar' | 'guide' | 'availabilities'
+type Page = 'calendar' | 'guide' | 'availabilities' | 'stats'
 
 function SetupRequired() {
   return (
@@ -320,6 +321,7 @@ function App() {
       <Navbar
         pseudo={pseudo}
         playerClass={playerClass}
+        isAdmin={isAdmin}
         pendingInvitations={pendingInvitations}
         onChangePseudo={() => setShowPseudoSetup(true)}
         searchQuery={searchQuery}
@@ -331,6 +333,8 @@ function App() {
       <main className={currentPage === 'guide' ? '' : 'container mx-auto px-4 py-6 max-w-6xl'}>
         {currentPage === 'guide' ? (
           <GuidePage />
+        ) : currentPage === 'stats' ? (
+          <StatsPage onBack={() => setCurrentPage('calendar')} />
         ) : currentPage === 'availabilities' ? (
           <AvailabilityPage
             targetPseudo={availabilityTarget}

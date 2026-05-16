@@ -1,10 +1,11 @@
-import { Sword, User, Pencil, Search, X, BookOpen, CalendarDays, CalendarCheck } from 'lucide-react'
+import { Sword, User, Pencil, Search, X, BookOpen, CalendarDays, CalendarCheck, BarChart2 } from 'lucide-react'
 
-type Page = 'calendar' | 'guide' | 'availabilities'
+type Page = 'calendar' | 'guide' | 'availabilities' | 'stats'
 
 interface Props {
   pseudo: string
   playerClass?: string
+  isAdmin?: boolean
   pendingInvitations?: number
   onChangePseudo: () => void
   searchQuery: string
@@ -16,6 +17,7 @@ interface Props {
 export function Navbar({
   pseudo,
   playerClass,
+  isAdmin = false,
   pendingInvitations = 0,
   onChangePseudo,
   searchQuery,
@@ -98,6 +100,24 @@ export function Navbar({
                 {pendingInvitations > 9 ? '9+' : pendingInvitations}
               </span>
             )}
+          </button>
+        )}
+
+        {/* Bouton Stats (BlueCheese uniquement) */}
+        {isAdmin && (
+          <button
+            onClick={() => onNavigate(currentPage === 'stats' ? 'calendar' : 'stats')}
+            className={`flex-shrink-0 flex items-center gap-2 border rounded-lg px-3 py-2 transition-colors group ${
+              currentPage === 'stats'
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                : 'bg-[#0d1117] border-[#30363d] hover:border-amber-400/60'
+            }`}
+            title="Tableau de bord"
+          >
+            <BarChart2
+              size={14}
+              className={currentPage === 'stats' ? 'text-amber-400' : 'text-gray-400 group-hover:text-amber-400 transition-colors'}
+            />
           </button>
         )}
 
