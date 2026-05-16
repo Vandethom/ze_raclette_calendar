@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { X, Sword, Calendar, Clock, Users, Star, FileText, Shield, CalendarRange } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Sword, Calendar, Clock, Users, Star, FileText, Shield, CalendarRange, UserPlus, Plus } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import type { CreateEventInput, EventPrefill } from '../types'
 import { ROLES } from '../lib/roles'
 
@@ -8,7 +9,7 @@ interface Props {
   prefill?: EventPrefill
   creatorPseudo: string
   creatorClass?: string
-  onSubmit: (data: CreateEventInput) => Promise<boolean>
+  onSubmit: (data: CreateEventInput, invitedPseudos: string[]) => Promise<boolean>
   onClose: () => void
 }
 
@@ -28,8 +29,27 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
   const [level, setLevel] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [inviteInput, setInviteInput] = useState('')
+  const [invitedPseudos, setInvitedPseudos] = useState<string[]>([])
+  const [knownPseudos, setKnownPseudos] = useState<string[]>([])
 
   const effectiveRole = selectedRole === '__custom__' ? customRole.trim() : selectedRole
+
+  useEffect(() => {
+    supabase.from('player_profiles').select('pseudo').then(({ data }) => {
+      setKnownPseudos((data ?? []).map((r: { pseudo: string }) => r.pseudo).filter(p => p !== creatorPseudo))
+    })
+  }, [creatorPseudo])
+
+  const addInvite = () => {
+    const p = inviteInput.trim()
+    if (p && p !== creatorPseudo && !invitedPseudos.includes(p)) {
+      setInvitedPseudos(prev => [...prev, p])
+    }
+    setInviteInput('')
+  }
+
+  const removeInvite = (p: string) => setInvitedPseudos(prev => prev.filter(x => x !== p))
 
   const handleToggleMultiDay = (checked: boolean) => {
     setIsMultiDay(checked)
@@ -64,7 +84,7 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
       max_participants: maxParticipants ? parseInt(maxParticipants) : null,
       level: level ? parseInt(level) : null,
       description: description.trim() || null,
-    })
+    }, invitedPseudos)
     setSubmitting(false)
     if (ok) onClose()
   }
@@ -284,6 +304,50 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
               rows={3}
               className={`${inputClass} resize-none`}
             />
+          </div>
+
+          {/* Inviter des joueurs */}
+          <div>
+            <label className={labelClass}>
+              <UserPlus size={13} className="inline mr-1 text-amber-400" />
+              Inviter des joueurs{' '}
+              <span className="text-gray-500 font-normal">(optionnel)</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inviteInput}
+                onChange={(e) => setInviteInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInvite() } }}
+                list="known-pseudos"
+                placeholder="Pseudo du joueur…"
+                className={inputClass}
+              />
+              <datalist id="known-pseudos">
+                {knownPseudos
+                  .filter(p => !invitedPseudos.includes(p))
+                  .map(p => <option key={p} value={p} />)}
+              </datalist>
+              <button
+                type="button"
+                onClick={addInvite}
+                className="flex-shrink-0 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-gray-300 hover:text-white px-3 rounded-lg transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            {invitedPseudos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {invitedPseudos.map(p => (
+                  <span key={p} className="flex items-center gap-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs px-2.5 py-1 rounded-full">
+                    {p}
+                    <button type="button" onClick={() => removeInvite(p)} className="hover:text-white transition-colors ml-0.5">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

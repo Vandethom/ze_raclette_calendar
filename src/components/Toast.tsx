@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { CheckCircle2, XCircle, X } from 'lucide-react'
+import { CheckCircle2, XCircle, X, Bell } from 'lucide-react'
 import type { Toast } from '../hooks/useToast'
 
 interface ContainerProps {
@@ -23,20 +23,20 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     return () => clearTimeout(timer)
   }, [toast.id, onDismiss])
 
-  const isSuccess = toast.type === 'success'
+  const colorMap = {
+    success: 'border-emerald-500/40 text-emerald-400',
+    error:   'border-red-500/40 text-red-400',
+    info:    'border-amber-500/40 text-amber-400',
+  }
+  const iconMap = {
+    success: <CheckCircle2 size={17} className="flex-shrink-0" />,
+    error:   <XCircle size={17} className="flex-shrink-0" />,
+    info:    <Bell size={17} className="flex-shrink-0" />,
+  }
 
   return (
-    <div
-      className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-xl min-w-[260px] animate-in
-        ${isSuccess
-          ? 'bg-[#161b22] border-emerald-500/40 text-emerald-400'
-          : 'bg-[#161b22] border-red-500/40 text-red-400'
-        }`}
-    >
-      {isSuccess
-        ? <CheckCircle2 size={17} className="flex-shrink-0" />
-        : <XCircle size={17} className="flex-shrink-0" />
-      }
+    <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-xl min-w-[260px] animate-in bg-[#161b22] ${colorMap[toast.type]}`}>
+      {iconMap[toast.type]}
       <span className="text-sm text-white flex-1">{toast.message}</span>
       <button
         onClick={() => onDismiss(toast.id)}

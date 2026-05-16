@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange, Pencil, ShieldAlert } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange, Pencil, ShieldAlert, Mail } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import type { GuildEventWithParticipants } from '../types'
+import { supabase } from '../lib/supabase'
+import type { GuildEventWithParticipants, EventInvitation } from '../types'
 import { ROLES } from '../lib/roles'
 
 interface Props {
@@ -21,6 +22,12 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [joinRole, setJoinRole] = useState('')
   const [joinCustomRole, setJoinCustomRole] = useState('')
+  const [invitations, setInvitations] = useState<EventInvitation[]>([])
+
+  useEffect(() => {
+    supabase.from('event_invitations').select('*').eq('event_id', event.id)
+      .then(({ data }) => setInvitations((data ?? []) as EventInvitation[]))
+  }, [event.id])
 
   const effectiveJoinRole = joinRole === '__custom__' ? joinCustomRole.trim() : joinRole
 
@@ -171,6 +178,33 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
               ))}
             </div>
           </div>
+
+          {/* Invités */}
+          {invitations.length > 0 && (
+            <div>
+              <span className="text-sm font-medium text-gray-300 flex items-center gap-1.5 mb-2">
+                <Mail size={14} className="text-amber-400" />
+                Invités
+              </span>
+              <div className="space-y-1.5">
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 bg-violet-400" />
+                    <span className="text-white">{inv.pseudo}</span>
+                    <span className={`ml-auto text-[11px] px-1.5 py-0.5 rounded-full border ${
+                      inv.status === 'accepted'
+                        ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                        : inv.status === 'declined'
+                          ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                          : 'text-gray-500 bg-[#0d1117] border-[#30363d]'
+                    }`}>
+                      {inv.status === 'accepted' ? 'Accepté' : inv.status === 'declined' ? 'Refusé' : 'En attente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           {event.description && (

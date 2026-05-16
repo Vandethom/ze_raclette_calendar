@@ -1,14 +1,22 @@
-import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, CalendarCheck, FileText, Check, Loader2 } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { ArrowLeft, CalendarCheck, FileText, Check, Loader2, Sword, Mail, CheckCircle2, XCircle, CalendarDays } from 'lucide-react'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
+import { supabase } from '../lib/supabase'
 import { useAvailability } from '../hooks/useAvailability'
-import type { WeeklyAvailability } from '../types'
+import type { WeeklyAvailability, GuildEvent, EventInvitationWithEvent } from '../types'
 
 interface Props {
-  targetPseudo: string   // le pseudo dont on affiche les dispos
-  isOwnProfile: boolean  // true = éditable
-  currentClass?: string  // classe du joueur connecté (pour sync)
+  targetPseudo: string
+  isOwnProfile: boolean
+  currentClass?: string
   onBack: () => void
+  onEventClick?: (eventId: string) => void
+  invitations?: EventInvitationWithEvent[]
+  onRespondToInvitation?: (invId: string, status: 'accepted' | 'declined', eventId: string, playerClass: string | null) => Promise<boolean>
 }
+
+type ProfileTab = 'availability' | 'events'
 
 const MIN_HOUR = 8
 const MAX_HOUR = 23
@@ -72,13 +80,52 @@ function cellClass(
   return base + cursor + bg + hover + rounding
 }
 
-export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onBack }: Props) {
+export function AvailabilityPage({
+  targetPseudo, isOwnProfile, currentClass, onBack, onEventClick,
+  invitations = [], onRespondToInvitation,
+}: Props) {
   const { profile, slots, loading, saveProfile, toggleSlot } = useAvailability(targetPseudo)
 
+  const [activeTab, setActiveTab] = useState<ProfileTab>('availability')
   const [note, setNote] = useState('')
   const [noteChanged, setNoteChanged] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
+  const [respondingId, setRespondingId] = useState<string | null>(null)
+
+  // Upcoming events (created + joined)
+  const [myEvents, setMyEvents] = useState<(GuildEvent & { myRole: 'organisateur' | 'participant' })[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+
+  const fetchMyEvents = useCallback(async () => {
+    if (!isOwnProfile) return
+    setEventsLoading(true)
+    const now = new Date().toISOString()
+
+    const [createdRes, partRes] = await Promise.all([
+      supabase.from('events').select('*').eq('creator_pseudo', targetPseudo).gte('date_end', now).order('date_start'),
+      supabase.from('participants').select('event_id').eq('pseudo', targetPseudo),
+    ])
+
+    const participantIds = (partRes.data ?? []).map((r: { event_id: string }) => r.event_id)
+    let joinedEvents: GuildEvent[] = []
+    if (participantIds.length > 0) {
+      const { data } = await supabase.from('events').select('*').in('id', participantIds).gte('date_end', now).order('date_start')
+      joinedEvents = (data ?? []) as GuildEvent[]
+    }
+
+    const created = ((createdRes.data ?? []) as GuildEvent[]).map(e => ({ ...e, myRole: 'organisateur' as const }))
+    const joined = joinedEvents
+      .filter(e => !created.some(c => c.id === e.id))
+      .map(e => ({ ...e, myRole: 'participant' as const }))
+    const merged = [...created, ...joined].sort((a, b) => a.date_start.localeCompare(b.date_start))
+    setMyEvents(merged)
+    setEventsLoading(false)
+  }, [targetPseudo, isOwnProfile])
+
+  useEffect(() => {
+    if (activeTab === 'events') fetchMyEvents()
+  }, [activeTab, fetchMyEvents])
 
   // Sync de la note depuis le profil chargé
   useEffect(() => {
@@ -120,10 +167,30 @@ export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onB
   const inputClass =
     'w-full bg-[#0d1117] border border-[#30363d] focus:border-amber-400 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none transition-colors text-sm resize-none'
 
+  const pendingInvitations = invitations.filter((i: EventInvitationWithEvent) => i.status === 'pending')
+
+  const handleRespond = async (inv: EventInvitationWithEvent, status: 'accepted' | 'declined') => {
+    if (!onRespondToInvitation) return
+    setRespondingId(inv.id)
+    await onRespondToInvitation(inv.id, status, inv.event_id, currentClass ?? null)
+    if (status === 'accepted') fetchMyEvents()
+    setRespondingId(null)
+  }
+
+  const formatEventDate = (event: GuildEvent) => {
+    const start = new Date(event.date_start)
+    const end = new Date(event.date_end)
+    const sameDay = start.toLocaleDateString('sv') === end.toLocaleDateString('sv')
+    if (sameDay) {
+      return `${format(start, 'EEE dd MMM', { locale: fr })} · ${format(start, 'HH:mm')}–${format(end, 'HH:mm')}`
+    }
+    return `${format(start, 'dd MMM', { locale: fr })} → ${format(end, 'dd MMM yyyy', { locale: fr })}`
+  }
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -136,7 +203,7 @@ export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onB
           <div className="flex items-center gap-2">
             <CalendarCheck size={18} className="text-amber-400" />
             <h1 className="text-white font-bold text-lg">
-              {isOwnProfile ? 'Mes disponibilités' : `Disponibilités de ${targetPseudo}`}
+              {isOwnProfile ? 'Mon profil' : `Profil de ${targetPseudo}`}
             </h1>
           </div>
         </div>
@@ -148,7 +215,144 @@ export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onB
         )}
       </div>
 
-      {loading ? (
+      {/* Onglets (uniquement sur son propre profil) */}
+      {isOwnProfile && (
+        <div className="flex gap-1 mb-6 bg-[#0d1117] border border-[#30363d] rounded-xl p-1">
+          <button
+            onClick={() => setActiveTab('availability')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'availability'
+                ? 'bg-[#161b22] text-amber-400 border border-[#30363d]'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <CalendarCheck size={14} />
+            Disponibilités
+          </button>
+          <button
+            onClick={() => setActiveTab('events')}
+            className={`relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'events'
+                ? 'bg-[#161b22] text-amber-400 border border-[#30363d]'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <Sword size={14} />
+            Mes événements
+            {pendingInvitations.length > 0 && (
+              <span className="absolute top-1 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                {pendingInvitations.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* ── Onglet "Mes événements" ── */}
+      {activeTab === 'events' && isOwnProfile && (
+        <div className="space-y-6">
+
+          {/* Invitations */}
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Mail size={15} className="text-amber-400" />
+              <h2 className="text-sm font-semibold text-white">Invitations reçues</h2>
+            </div>
+
+            {invitations.length === 0 ? (
+              <p className="text-gray-600 text-sm text-center py-4">Aucune invitation pour le moment.</p>
+            ) : (
+              <div className="space-y-3">
+                {[...invitations].sort((a, b) => {
+                  const order = { pending: 0, accepted: 1, declined: 2 }
+                  return order[a.status] - order[b.status]
+                }).map((inv) => (
+                  <div key={inv.id} className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    inv.status === 'pending' ? 'border-amber-500/30 bg-amber-500/5' : 'border-[#30363d] bg-[#0d1117]/50'
+                  }`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{inv.events.dungeon_name}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{formatEventDate(inv.events)}</p>
+                      <p className="text-gray-600 text-xs">par {inv.events.creator_pseudo}</p>
+                    </div>
+                    {inv.status === 'pending' ? (
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleRespond(inv, 'accepted')}
+                          disabled={respondingId === inv.id}
+                          className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+                        >
+                          {respondingId === inv.id ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                          Accepter
+                        </button>
+                        <button
+                          onClick={() => handleRespond(inv, 'declined')}
+                          disabled={respondingId === inv.id}
+                          className="flex items-center gap-1 border border-red-500/40 text-red-400 hover:bg-red-500/10 disabled:opacity-50 text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+                        >
+                          <XCircle size={11} />
+                          Refuser
+                        </button>
+                      </div>
+                    ) : (
+                      <span className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full border ${
+                        inv.status === 'accepted'
+                          ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                          : 'text-gray-600 bg-[#0d1117] border-[#30363d]'
+                      }`}>
+                        {inv.status === 'accepted' ? '✓ Accepté' : '✗ Refusé'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Prochains événements */}
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarDays size={15} className="text-amber-400" />
+              <h2 className="text-sm font-semibold text-white">Prochains événements</h2>
+            </div>
+
+            {eventsLoading ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm py-4 justify-center">
+                <Loader2 size={14} className="animate-spin" /> Chargement…
+              </div>
+            ) : myEvents.length === 0 ? (
+              <p className="text-gray-600 text-sm text-center py-4">Aucun événement à venir.</p>
+            ) : (
+              <div className="space-y-2">
+                {myEvents.map(e => (
+                  <button
+                    key={e.id}
+                    onClick={() => onEventClick?.(e.id)}
+                    disabled={!onEventClick}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-[#30363d] bg-[#0d1117]/50 hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors text-left disabled:cursor-default disabled:hover:border-[#30363d] disabled:hover:bg-[#0d1117]/50"
+                  >
+                    <Sword size={14} className="text-amber-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{e.dungeon_name}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{formatEventDate(e)}</p>
+                    </div>
+                    <span className={`flex-shrink-0 text-[11px] px-2 py-0.5 rounded-full border ${
+                      e.myRole === 'organisateur'
+                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                        : 'text-gray-400 bg-[#0d1117] border-[#30363d]'
+                    }`}>
+                      {e.myRole}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Onglet "Disponibilités" ── */}
+      {(activeTab === 'availability' || !isOwnProfile) && (loading ? (
         <div className="flex items-center justify-center h-48 gap-3 text-gray-500">
           <Loader2 size={20} className="animate-spin" />
           <span className="text-sm">Chargement…</span>
@@ -232,10 +436,9 @@ export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onB
 
                 {/* Lignes d'heures */}
                 {HOURS.map((hour) => (
-                  <>
+                  <React.Fragment key={hour}>
                     {/* Étiquette heure */}
                     <div
-                      key={`lbl-${hour}`}
                       className="bg-[#161b22] h-7 flex items-center justify-end pr-2 text-xs text-gray-600 font-mono"
                     >
                       {hour}h
@@ -272,7 +475,7 @@ export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onB
                         </button>
                       )
                     })}
-                  </>
+                  </React.Fragment>
                 ))}
               </div>
             </div>
@@ -308,7 +511,7 @@ export function AvailabilityPage({ targetPseudo, isOwnProfile, currentClass, onB
             </div>
           )}
         </div>
-      )}
+      ))}
     </div>
   )
 }

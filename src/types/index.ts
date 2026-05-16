@@ -78,6 +78,20 @@ export interface EventPrefill {
   endTime?: string    // HH:MM
 }
 
+// ─── Invitations ─────────────────────────────────────────────────────────────
+
+export interface EventInvitation {
+  id: string
+  event_id: string
+  pseudo: string
+  status: 'pending' | 'accepted' | 'declined'
+  invited_at: string
+}
+
+export interface EventInvitationWithEvent extends EventInvitation {
+  events: GuildEvent
+}
+
 // ─── Disponibilités hebdomadaires ────────────────────────────────────────────
 
 export interface PlayerProfile {

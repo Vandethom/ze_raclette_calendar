@@ -5,6 +5,7 @@ type Page = 'calendar' | 'guide' | 'availabilities'
 interface Props {
   pseudo: string
   playerClass?: string
+  pendingInvitations?: number
   onChangePseudo: () => void
   searchQuery: string
   onSearchChange: (q: string) => void
@@ -15,6 +16,7 @@ interface Props {
 export function Navbar({
   pseudo,
   playerClass,
+  pendingInvitations = 0,
   onChangePseudo,
   searchQuery,
   onSearchChange,
@@ -65,16 +67,16 @@ export function Navbar({
           <div className="flex-1" />
         )}
 
-        {/* Bouton Mes dispos */}
+        {/* Bouton Mon profil */}
         {pseudo && (
           <button
             onClick={() => onNavigate(currentPage === 'availabilities' ? 'calendar' : 'availabilities')}
-            className={`flex-shrink-0 flex items-center gap-2 border rounded-lg px-3 py-2 transition-colors group ${
+            className={`relative flex-shrink-0 flex items-center gap-2 border rounded-lg px-3 py-2 transition-colors group ${
               currentPage === 'availabilities'
                 ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
                 : 'bg-[#0d1117] border-[#30363d] hover:border-amber-400/60'
             }`}
-            title={currentPage === 'availabilities' ? 'Retour au calendrier' : 'Mes disponibilités'}
+            title={currentPage === 'availabilities' ? 'Retour au calendrier' : 'Mon profil & disponibilités'}
           >
             <CalendarCheck
               size={14}
@@ -89,8 +91,13 @@ export function Navbar({
                 currentPage === 'availabilities' ? 'text-amber-400' : 'text-gray-300'
               }`}
             >
-              Dispos
+              Profil
             </span>
+            {pendingInvitations > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                {pendingInvitations > 9 ? '9+' : pendingInvitations}
+              </span>
+            )}
           </button>
         )}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { isSupabaseConfigured } from './lib/supabase'
 import { Navbar } from './components/Navbar'
 import { CalendarView } from './components/CalendarView'
@@ -16,6 +16,7 @@ import { WishDetailModal } from './components/WishDetailModal'
 import { ToastContainer } from './components/Toast'
 import { useEvents } from './hooks/useEvents'
 import { useWishes } from './hooks/useWishes'
+import { useInvitations } from './hooks/useInvitations'
 import { useToast } from './hooks/useToast'
 import type {
   GuildEventWithParticipants,
@@ -125,6 +126,12 @@ function App() {
   } = useEvents(pseudo)
 
   const { wishes, wishAvailabilities, createWish, convertWish, deleteWish } = useWishes()
+  const {
+    invitations,
+    pendingCount: pendingInvitations,
+    sendInvitations,
+    respondToInvitation,
+  } = useInvitations(pseudo || null)
 
   const filteredEvents = searchQuery.trim()
     ? events.filter((e) => {
@@ -136,6 +143,18 @@ function App() {
     : events
 
   const { toasts, addToast, dismissToast } = useToast()
+
+  // Toast à la (re)connexion si invitations en attente
+  const prevPseudo = useRef('')
+  useEffect(() => {
+    if (pseudo && prevPseudo.current === '' && pendingInvitations > 0) {
+      addToast(
+        `Tu as ${pendingInvitations} invitation${pendingInvitations > 1 ? 's' : ''} en attente !`,
+        'info'
+      )
+    }
+    prevPseudo.current = pseudo
+  }, [pseudo, pendingInvitations]) // eslint-disable-line
 
   const applyProfile = (newPseudo: string, newClass: string) => {
     setPseudo(newPseudo)
@@ -186,10 +205,13 @@ function App() {
     else addToast('Impossible de charger l\'événement.', 'error')
   }
 
-  const handleCreateEvent = async (data: CreateEventInput): Promise<boolean> => {
+  const handleCreateEvent = async (data: CreateEventInput, invitedPseudos: string[]): Promise<boolean> => {
     const result = await createEvent(data)
     if (result) {
       addToast('Événement créé avec succès !', 'success')
+      if (invitedPseudos.length > 0) {
+        await sendInvitations(result.id, invitedPseudos)
+      }
       if (pendingConvertWishId) {
         await convertWish(pendingConvertWishId, result.id)
         addToast('Envie convertie en événement !', 'success')
@@ -298,6 +320,7 @@ function App() {
       <Navbar
         pseudo={pseudo}
         playerClass={playerClass}
+        pendingInvitations={pendingInvitations}
         onChangePseudo={() => setShowPseudoSetup(true)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -314,6 +337,12 @@ function App() {
             isOwnProfile={!availabilityViewPseudo}
             currentClass={playerClass || undefined}
             onBack={() => setCurrentPage('calendar')}
+            onEventClick={async (eventId) => {
+              const event = await fetchEventWithParticipants(eventId)
+              if (event) setDetailEvent(event)
+            }}
+            invitations={invitations}
+            onRespondToInvitation={respondToInvitation}
           />
         ) : (
           <>
