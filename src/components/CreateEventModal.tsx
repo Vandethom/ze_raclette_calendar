@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Sword, Calendar, Clock, Users, Star, FileText, Shield, CalendarRange, UserPlus, Plus } from 'lucide-react'
+import { X, Sword, Calendar, Clock, Users, Star, FileText, Shield, CalendarRange, UserPlus, Plus, Swords } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { CreateEventInput, EventPrefill } from '../types'
 import { ROLES } from '../lib/roles'
@@ -17,6 +17,8 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
   const today = new Date().toISOString().slice(0, 10)
   const initDate = prefill?.date ?? initialDate?.slice(0, 10) ?? today
 
+  const [eventType, setEventType] = useState<'dungeon' | 'raid'>('dungeon')
+  const [raidGroups, setRaidGroups] = useState(4)
   const [dungeonName, setDungeonName] = useState(prefill?.activityName ?? '')
   const [isMultiDay, setIsMultiDay] = useState(false)
   const [startDate, setStartDate] = useState(initDate)
@@ -81,9 +83,11 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
       creator_class: creatorClass || null,
       date_start: dateStart,
       date_end: dateEnd,
-      max_participants: maxParticipants ? parseInt(maxParticipants) : null,
+      max_participants: eventType === 'raid' ? raidGroups * 4 : (maxParticipants ? parseInt(maxParticipants) : null),
       level: level ? parseInt(level) : null,
       description: description.trim() || null,
+      event_type: eventType,
+      raid_groups: eventType === 'raid' ? raidGroups : null,
     }, invitedPseudos)
     setSubmitting(false)
     if (ok) onClose()
@@ -112,6 +116,66 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
             Organisé par{' '}
             <span className="text-amber-400 font-semibold">{creatorPseudo}</span>
           </p>
+
+          {/* Type d'événement : Donjon / Raid */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setEventType('dungeon')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                eventType === 'dungeon'
+                  ? 'bg-amber-500/15 border-amber-500/50 text-amber-300'
+                  : 'bg-[#0d1117] border-[#30363d] text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <Sword size={14} />
+              Donjon
+            </button>
+            <button
+              type="button"
+              onClick={() => setEventType('raid')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                eventType === 'raid'
+                  ? 'bg-violet-500/15 border-violet-500/50 text-violet-300'
+                  : 'bg-[#0d1117] border-[#30363d] text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <Swords size={14} />
+              Raid
+            </button>
+          </div>
+
+          {/* Sélecteur de sous-groupes (raid uniquement) */}
+          {eventType === 'raid' && (
+            <div className="bg-violet-500/8 border border-violet-500/20 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-medium text-violet-300 flex items-center gap-1.5">
+                <Swords size={12} />
+                Configuration du raid
+              </p>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Nombre de groupes</label>
+                <div className="flex gap-2">
+                  {[2, 3, 4].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setRaidGroups(n)}
+                      className={`flex-1 py-1.5 rounded-lg border text-sm font-semibold transition-colors ${
+                        raidGroups === n
+                          ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
+                          : 'bg-[#0d1117] border-[#30363d] text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-600 mt-1.5">
+                  {raidGroups} × 4 joueurs = {raidGroups * 4} places (+ organisateur)
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Nom de l'événement */}
           <div>
@@ -255,23 +319,25 @@ export function CreateEventModal({ initialDate, prefill, creatorPseudo, creatorC
           </div>
 
           {/* Places max + Niveau */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>
-                <Users size={13} className="inline mr-1 text-amber-400" />
-                Places max{' '}
-                <span className="text-gray-500 font-normal">(optionnel)</span>
-              </label>
-              <input
-                type="number"
-                value={maxParticipants}
-                onChange={(e) => setMaxParticipants(e.target.value)}
-                min="2"
-                max="20"
-                placeholder="Ex : 4"
-                className={inputClass}
-              />
-            </div>
+          <div className={eventType === 'raid' ? '' : 'grid grid-cols-2 gap-3'}>
+            {eventType === 'dungeon' && (
+              <div>
+                <label className={labelClass}>
+                  <Users size={13} className="inline mr-1 text-amber-400" />
+                  Places max{' '}
+                  <span className="text-gray-500 font-normal">(optionnel)</span>
+                </label>
+                <input
+                  type="number"
+                  value={maxParticipants}
+                  onChange={(e) => setMaxParticipants(e.target.value)}
+                  min="2"
+                  max="20"
+                  placeholder="Ex : 4"
+                  className={inputClass}
+                />
+              </div>
+            )}
             <div>
               <label className={labelClass}>
                 <Star size={13} className="inline mr-1 text-amber-400" />

@@ -224,9 +224,9 @@ function App() {
     return false
   }
 
-  const handleJoin = async (role: string | null) => {
+  const handleJoin = async (role: string | null, groupNumber?: number | null) => {
     if (!detailEvent) return
-    const { ok, errorMsg } = await joinEvent(detailEvent.id, pseudo, role, playerClass || null)
+    const { ok, errorMsg } = await joinEvent(detailEvent.id, pseudo, role, playerClass || null, groupNumber)
     if (ok) {
       addToast(`Tu as rejoint "${detailEvent.dungeon_name}" !`, 'success')
       const updated = await fetchEventWithParticipants(detailEvent.id)

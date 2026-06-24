@@ -54,15 +54,27 @@ export function CalendarView({
     const levelLabel = event.level ? ` (${event.level})` : ''
     const title = `${event.creator_pseudo} — ${event.dungeon_name}${levelLabel}${roleLabel}`
 
+    const isRaid = event.event_type === 'raid'
+    let bgColor: string
+    let borderColor: string
+    let textColor: string
+    if (isInvolved) {
+      bgColor = '#f59e0b'; borderColor = '#b45309'; textColor = '#000'
+    } else if (isRaid) {
+      bgColor = '#7c3aed'; borderColor = '#5b21b6'; textColor = '#fff'
+    } else {
+      bgColor = '#3b82f6'; borderColor = '#1d4ed8'; textColor = '#fff'
+    }
+
     return {
       id: event.id,
-      title,
+      title: isRaid ? `⚔ ${title}` : title,
       start: fcStart,
       end: fcEnd,
       allDay: isMultiDay,
-      backgroundColor: isInvolved ? '#f59e0b' : '#3b82f6',
-      borderColor: isInvolved ? '#b45309' : '#1d4ed8',
-      textColor: isInvolved ? '#000' : '#fff',
+      backgroundColor: bgColor,
+      borderColor,
+      textColor,
     }
   })
 

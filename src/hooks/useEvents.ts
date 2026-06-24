@@ -68,10 +68,11 @@ export function useEvents(currentPseudo: string) {
     return true
   }
 
-  const joinEvent = async (eventId: string, pseudo: string, role?: string | null, playerClass?: string | null): Promise<{ ok: boolean; errorMsg?: string }> => {
+  const joinEvent = async (eventId: string, pseudo: string, role?: string | null, playerClass?: string | null, groupNumber?: number | null): Promise<{ ok: boolean; errorMsg?: string }> => {
     const payload: Record<string, unknown> = { event_id: eventId, pseudo }
     if (role) payload.role = role
     if (playerClass) payload.player_class = playerClass
+    if (groupNumber != null) payload.group_number = groupNumber
     const { error } = await supabase.from('participants').insert(payload)
     if (error) { setError(error.message); return { ok: false, errorMsg: error.message } }
     return { ok: true }

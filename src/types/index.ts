@@ -9,6 +9,8 @@ export interface GuildEvent {
   max_participants: number | null
   level: number | null
   description: string | null
+  event_type: 'dungeon' | 'raid'
+  raid_groups: number | null
   created_at: string
 }
 
@@ -18,6 +20,7 @@ export interface Participant {
   pseudo: string
   role: string | null
   player_class: string | null
+  group_number: number | null
   joined_at: string
 }
 

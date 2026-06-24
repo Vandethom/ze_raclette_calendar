@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange, Pencil, ShieldAlert, Mail } from 'lucide-react'
+import { X, Sword, Calendar, Clock, Users, Star, UserPlus, UserMinus, Trash2, FileText, Shield, CalendarRange, Pencil, ShieldAlert, Mail, Swords } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { supabase } from '../lib/supabase'
@@ -10,7 +10,7 @@ interface Props {
   event: GuildEventWithParticipants
   currentPseudo: string
   isAdmin?: boolean
-  onJoin: (role: string | null) => Promise<void>
+  onJoin: (role: string | null, groupNumber?: number | null) => Promise<void>
   onLeave: () => Promise<void>
   onDelete: () => Promise<void>
   onEdit?: () => void
@@ -22,6 +22,7 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [joinRole, setJoinRole] = useState('')
   const [joinCustomRole, setJoinCustomRole] = useState('')
+  const [joinGroup, setJoinGroup] = useState<number | null>(null)
   const [invitations, setInvitations] = useState<EventInvitation[]>([])
 
   useEffect(() => {
@@ -35,6 +36,16 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
   const hasJoined = event.participants.some((p) => p.pseudo === currentPseudo)
   const totalCount = event.participants.length + 1
   const isFull = event.max_participants !== null && totalCount >= event.max_participants
+
+  const isRaid = event.event_type === 'raid'
+  const numGroups = event.raid_groups ?? 4
+  const slotsPerGroup = event.max_participants ? Math.floor(event.max_participants / numGroups) : 4
+  const participantsByGroup = isRaid
+    ? Array.from({ length: numGroups }, (_, i) => ({
+        group: i + 1,
+        members: event.participants.filter((p) => p.group_number === i + 1),
+      }))
+    : []
 
   const dateStart = new Date(event.date_start)
   const dateEnd = new Date(event.date_end)
@@ -55,8 +66,16 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
         <div className="flex items-start justify-between px-6 py-4 border-b border-[#30363d]">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sword className="text-amber-400 flex-shrink-0" size={20} />
+              {isRaid
+                ? <Swords className="text-violet-400 flex-shrink-0" size={20} />
+                : <Sword className="text-amber-400 flex-shrink-0" size={20} />
+              }
               {event.dungeon_name}
+              {isRaid && (
+                <span className="text-xs font-semibold bg-violet-500/15 border border-violet-500/30 text-violet-300 px-2 py-0.5 rounded-full">
+                  Raid
+                </span>
+              )}
             </h2>
             {event.level && (
               <span className="text-xs text-amber-400/70 ml-7">Niveau {event.level}</span>
@@ -140,9 +159,12 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
             )}
 
             <div className="space-y-1.5">
-              {/* Créateur */}
+              {/* Créateur / chef de raid */}
               <div className="flex items-center gap-2 text-sm">
-                <Star size={12} className="text-amber-400 flex-shrink-0" />
+                {isRaid
+                  ? <Swords size={12} className="text-violet-400 flex-shrink-0" />
+                  : <Star size={12} className="text-amber-400 flex-shrink-0" />
+                }
                 <span className="text-white">{event.creator_pseudo}</span>
                 {event.creator_class && (
                   <span className="text-[11px] text-amber-400/70 bg-amber-500/8 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
@@ -154,28 +176,75 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
                     {event.creator_role}
                   </span>
                 )}
-                <span className="ml-auto text-[11px] text-amber-400/60">Organisateur</span>
+                <span className="ml-auto text-[11px] text-amber-400/60">
+                  {isRaid ? 'Chef de raid' : 'Organisateur'}
+                </span>
               </div>
-              {/* Participants */}
-              {event.participants.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 text-sm">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.pseudo === currentPseudo ? 'bg-blue-400' : 'bg-gray-500'}`} />
-                  <span className="text-white">{p.pseudo}</span>
-                  {p.player_class && (
-                    <span className="text-[11px] text-gray-500 bg-[#0d1117] border border-[#30363d] px-1.5 py-0.5 rounded-full">
-                      {p.player_class}
-                    </span>
-                  )}
-                  {p.role && (
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${p.pseudo === currentPseudo ? 'text-blue-300 bg-blue-500/10 border-blue-500/20' : 'text-gray-400 bg-[#0d1117] border-[#30363d]'}`}>
-                      {p.role}
-                    </span>
-                  )}
-                  {p.pseudo === currentPseudo && (
-                    <span className="ml-auto text-[11px] text-blue-400/60">Toi</span>
-                  )}
+
+              {/* Participants — affichage par groupes pour les raids */}
+              {isRaid ? (
+                <div className="space-y-3 mt-2">
+                  {participantsByGroup.map(({ group, members }) => (
+                    <div key={group}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[11px] font-semibold text-violet-400 uppercase tracking-wider">
+                          Groupe {group}
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${
+                          members.length >= slotsPerGroup
+                            ? 'text-red-400 border-red-500/30 bg-red-500/10'
+                            : 'text-gray-600 border-[#30363d] bg-[#0d1117]'
+                        }`}>
+                          {members.length}/{slotsPerGroup}
+                        </span>
+                      </div>
+                      {members.length === 0 ? (
+                        <p className="text-xs text-gray-700 italic pl-1">Aucun joueur</p>
+                      ) : (
+                        members.map((p) => (
+                          <div key={p.id} className="flex items-center gap-2 text-sm pl-1">
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.pseudo === currentPseudo ? 'bg-blue-400' : 'bg-gray-500'}`} />
+                            <span className="text-white">{p.pseudo}</span>
+                            {p.player_class && (
+                              <span className="text-[11px] text-gray-500 bg-[#0d1117] border border-[#30363d] px-1.5 py-0.5 rounded-full">
+                                {p.player_class}
+                              </span>
+                            )}
+                            {p.role && (
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${p.pseudo === currentPseudo ? 'text-blue-300 bg-blue-500/10 border-blue-500/20' : 'text-gray-400 bg-[#0d1117] border-[#30363d]'}`}>
+                                {p.role}
+                              </span>
+                            )}
+                            {p.pseudo === currentPseudo && (
+                              <span className="ml-auto text-[11px] text-blue-400/60">Toi</span>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                event.participants.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 text-sm">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${p.pseudo === currentPseudo ? 'bg-blue-400' : 'bg-gray-500'}`} />
+                    <span className="text-white">{p.pseudo}</span>
+                    {p.player_class && (
+                      <span className="text-[11px] text-gray-500 bg-[#0d1117] border border-[#30363d] px-1.5 py-0.5 rounded-full">
+                        {p.player_class}
+                      </span>
+                    )}
+                    {p.role && (
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${p.pseudo === currentPseudo ? 'text-blue-300 bg-blue-500/10 border-blue-500/20' : 'text-gray-400 bg-[#0d1117] border-[#30363d]'}`}>
+                        {p.role}
+                      </span>
+                    )}
+                    {p.pseudo === currentPseudo && (
+                      <span className="ml-auto text-[11px] text-blue-400/60">Toi</span>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -261,9 +330,44 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
             {/* ── Mode membre normal ── */}
             {!isAdmin && (
               <>
-                {/* Sélecteur de rôle + rejoindre */}
+                {/* Sélecteur de groupe (raid uniquement) + rôle + rejoindre */}
                 {!isCreator && !hasJoined && !isFull && (
                   <div className="space-y-2">
+                    {/* Sélecteur de groupe pour les raids */}
+                    {isRaid && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
+                          <Swords size={11} className="text-violet-400" />
+                          Choisis ton groupe
+                        </label>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {participantsByGroup.map(({ group, members }) => {
+                            const full = members.length >= slotsPerGroup
+                            const selected = joinGroup === group
+                            return (
+                              <button
+                                key={group}
+                                type="button"
+                                onClick={() => !full && setJoinGroup(group)}
+                                disabled={full}
+                                className={`flex flex-col items-center py-2 rounded-lg border text-xs font-medium transition-colors ${
+                                  full
+                                    ? 'border-[#30363d] text-gray-700 bg-[#0d1117] cursor-not-allowed'
+                                    : selected
+                                      ? 'border-violet-500/60 bg-violet-500/20 text-violet-300'
+                                      : 'border-[#30363d] bg-[#0d1117] text-gray-400 hover:border-violet-500/40 hover:text-violet-300'
+                                }`}
+                              >
+                                <span className="font-bold">G{group}</span>
+                                <span className={`text-[10px] mt-0.5 ${full ? 'text-red-500' : 'text-gray-600'}`}>
+                                  {members.length}/{slotsPerGroup}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-medium text-gray-400 mb-1.5 flex items-center gap-1">
                         <Shield size={11} className="text-amber-400" />
@@ -290,12 +394,12 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
                       )}
                     </div>
                     <button
-                      onClick={() => withLoading('join', () => onJoin(effectiveJoinRole || null))}
-                      disabled={loading !== null}
-                      className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                      onClick={() => withLoading('join', () => onJoin(effectiveJoinRole || null, isRaid ? joinGroup : undefined))}
+                      disabled={loading !== null || (isRaid && joinGroup === null)}
+                      className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:bg-[#21262d] disabled:text-gray-600 text-black font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
                     >
                       <UserPlus size={15} />
-                      {loading === 'join' ? 'Inscription…' : 'Rejoindre'}
+                      {loading === 'join' ? 'Inscription…' : isRaid && joinGroup === null ? 'Choisis un groupe' : 'Rejoindre'}
                     </button>
                   </div>
                 )}
