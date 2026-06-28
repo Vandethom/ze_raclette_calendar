@@ -1,6 +1,6 @@
-import { Sword, User, Pencil, Search, X, BookOpen, CalendarDays, CalendarCheck, BarChart2 } from 'lucide-react'
+import { Sword, User, Pencil, Search, X, BookOpen, CalendarDays, CalendarCheck, BarChart2, ScrollText } from 'lucide-react'
 
-type Page = 'calendar' | 'guide' | 'availabilities' | 'stats'
+type Page = 'calendar' | 'guide' | 'availabilities' | 'stats' | 'strategies'
 
 interface Props {
   pseudo: string
@@ -120,6 +120,26 @@ export function Navbar({
             />
           </button>
         )}
+
+        {/* Bouton Stratégies */}
+        <button
+          onClick={() => onNavigate(currentPage === 'strategies' ? 'calendar' : 'strategies')}
+          className={`flex-shrink-0 flex items-center gap-2 border rounded-lg px-3 py-2 transition-colors group ${
+            currentPage === 'strategies'
+              ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+              : 'bg-[#0d1117] border-[#30363d] hover:border-amber-400/60'
+          }`}
+          title={currentPage === 'strategies' ? 'Retour au calendrier' : 'Stratégies de donjons & raids'}
+        >
+          {currentPage === 'strategies' ? (
+            <CalendarDays size={14} className="text-amber-400" />
+          ) : (
+            <ScrollText size={14} className="text-gray-400 group-hover:text-amber-400 transition-colors" />
+          )}
+          <span className={`text-sm hidden sm:inline ${currentPage === 'strategies' ? 'text-amber-400' : 'text-gray-300'}`}>
+            {currentPage === 'strategies' ? 'Calendrier' : 'Stratégies'}
+          </span>
+        </button>
 
         {/* Bouton Guide / Calendrier */}
         <button

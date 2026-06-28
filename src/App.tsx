@@ -6,6 +6,7 @@ import { SearchResults } from './components/SearchResults'
 import { GuidePage } from './components/GuidePage'
 import { AvailabilityPage } from './components/AvailabilityPage'
 import { StatsPage } from './components/StatsPage'
+import { StrategiesPage } from './components/StrategiesPage'
 import { CreateEventModal } from './components/CreateEventModal'
 import { EditEventModal } from './components/EditEventModal'
 import { EventDetailModal } from './components/EventDetailModal'
@@ -32,7 +33,7 @@ const CLASS_KEY = 'ze_raclette_class'
 const ADMIN_SESSION_KEY = 'ze_raclette_admin'
 const ADMIN_PSEUDO = 'BlueCheese'
 
-type Page = 'calendar' | 'guide' | 'availabilities' | 'stats'
+type Page = 'calendar' | 'guide' | 'availabilities' | 'stats' | 'strategies'
 
 function SetupRequired() {
   return (
@@ -335,6 +336,8 @@ function App() {
           <GuidePage />
         ) : currentPage === 'stats' ? (
           <StatsPage onBack={() => setCurrentPage('calendar')} />
+        ) : currentPage === 'strategies' ? (
+          <StrategiesPage />
         ) : currentPage === 'availabilities' ? (
           <AvailabilityPage
             targetPseudo={availabilityTarget}
