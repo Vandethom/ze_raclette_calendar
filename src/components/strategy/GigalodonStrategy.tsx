@@ -1,4 +1,4 @@
-import { Waves, Skull, KeyRound, Sparkles, Trophy, ArrowLeft } from 'lucide-react'
+import { Waves, Skull, KeyRound, Sparkles, Trophy, ArrowLeft, Gem, MapPin } from 'lucide-react'
 import {
   StrategySection, MonsterBlock, SpellRow, TacticList, StratTip, RewardBox, SimpleTable,
 } from './StrategyUI'
@@ -55,6 +55,21 @@ export function GigalodonStrategy({ onBack }: { onBack: () => void }) {
           Coût en Sel des profondeurs : 1 sel → intensité 1, 3 sels → intensité 2 (4 cumulés), 6 sels → intensité 3 (10 cumulés), 10 sels → intensité 4 (20 cumulés).
         </p>
         <StratTip color="violet">Pour la majorité des combats, montez l'intensité à 4 pour aller vite. Ne descendez qu'à 3 si vous cherchez du score supplémentaire et que le groupe est solide.</StratTip>
+      </StrategySection>
+
+      {/* Emplacements du Sel des profondeurs */}
+      <StrategySection title="Emplacements du Sel des profondeurs" icon={<MapPin size={18} />} accent="violet">
+        <p className="text-sm text-gray-400">
+          Les gisements ne nécessitent aucun métier. Temps de repop estimé : <span className="text-white">5 à 10 minutes</span>.
+        </p>
+        <SimpleTable rows={[
+          ['Étage -1', '[3,2] · [2,2] · [4,2] · [3,3]'],
+          ['Étage -2', '[3,5] · [2,6] · [4,6] · [3,7] · [4,7] (×2) · [5,9] (passage secret)'],
+          ['Étage -3', '[2,10] · [3,10] · [1,11] · [2,12]'],
+          ['Étage -4', '[6,11] · [7,10] · [8,10] (×2)'],
+          ['Étage -5', '[11,14] · [12,14] · [12,13] · [11,13]'],
+        ]} />
+        <StratTip color="violet">Désignez 1-2 joueurs « récolteurs » qui passent miner pendant que le reste du groupe avance ou combat — ça évite de perdre du temps de raid collectivement.</StratTip>
       </StrategySection>
 
       {/* Étage -1 */}
@@ -294,6 +309,38 @@ export function GigalodonStrategy({ onBack }: { onBack: () => void }) {
             ['600 000', '13 000 pts'], ['800 000', '14 000 pts'], ['1 000 000', '15 000 pts'],
           ]} />
         </div>
+      </StrategySection>
+
+      {/* Tableau des loots */}
+      <StrategySection title="Tableau des loots" icon={<Gem size={18} />} accent="violet">
+        <p className="text-sm text-gray-400">Ressources communes (récoltées en mineant le Sel des profondeurs, donnent des points de score) :</p>
+        <SimpleTable rows={[
+          ['Sel des profondeurs', 'Aucun point — utilisé pour monter l\'intensité lumineuse'],
+          ['Quartz', '2 points'],
+          ['Opale', '4 points'],
+          ['Amazonite', '6 points'],
+          ['Aventurine', '10 points'],
+          ['Lapiz', '15 points'],
+          ['Jais', '20 points'],
+          ['Onyx', '30 points'],
+        ]} />
+
+        <p className="text-sm text-gray-400 pt-1">Butins uniques de boss :</p>
+        <SimpleTable rows={[
+          ['Unité de Mureine', 'Drop Mureine (étage -2) · 1000 points · unique sur un personnage'],
+          ['Rancune d\'Exécrabe', 'Drop Exécrabe (étage -4) · 5000 points'],
+          ['Pince d\'Exécrabe', 'Drop Exécrabe (étage -4) · ouvre le raccourci -2 → -4'],
+          ['Noirceur de Willorque', 'Drop Willorque (étage -6) · 10 000 points'],
+        ]} />
+
+        <p className="text-sm text-gray-400 pt-1">Fragments de clé (nécessaires pour accéder au combat final) :</p>
+        <SimpleTable rows={[
+          ['Fragment 1', 'Tous monstres du raid · 1% base → jusqu\'à 20% selon le score (5% à 5000 pts, 10% à 7000 pts, 20% à 10000 pts)'],
+          ['Fragment 2', 'Garanti sur Mureine (étage -2)'],
+          ['Fragment 3', 'Garanti sur Exécrabe (étage -4)'],
+          ['Fragment 4', 'Uniquement Krak\'Haine (étage -5) · 1% base + bonus de score'],
+        ]} />
+        <StratTip color="violet">Plus le score du raid est élevé avant l'étage -5, plus le taux de drop des fragments 1 et 4 augmente — viser 10 000 points avant cet étage donne 20% de chances par monstre.</StratTip>
       </StrategySection>
 
       {/* Récap timing */}
