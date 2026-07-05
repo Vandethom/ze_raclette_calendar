@@ -61,9 +61,9 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 border-b border-[#30363d]">
+        <div className="flex items-start justify-between px-6 py-4 border-b border-[#30363d] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               {isRaid
@@ -86,7 +86,7 @@ export function EventDetailModal({ event, currentPseudo, isAdmin, onJoin, onLeav
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Organisateur + rôle */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-400">
